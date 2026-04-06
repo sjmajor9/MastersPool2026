@@ -90,44 +90,43 @@
     .countdown-wrap {
       display: flex;
       justify-content: center;
-      gap: 20px;
-      margin-top: 24px;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
       flex-wrap: wrap;
     }
     .countdown-block {
       text-align: center;
-      min-width: 70px;
+      min-width: 44px;
     }
     .countdown-num {
       font-family: 'Playfair Display', serif;
-      font-size: clamp(32px, 6vw, 52px);
+      font-size: 22px;
       font-weight: 900;
       color: var(--white);
       line-height: 1;
     }
     .countdown-label {
-      font-size: 10px;
-      letter-spacing: 3px;
+      font-size: 9px;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      color: rgba(201,168,76,0.7);
-      margin-top: 4px;
+      color: rgba(201,168,76,0.6);
+      margin-top: 2px;
     }
     .countdown-sep {
       font-family: 'Playfair Display', serif;
-      font-size: 40px;
-      font-weight: 900;
+      font-size: 18px;
+      font-weight: 700;
       color: rgba(201,168,76,0.3);
-      line-height: 1.1;
-      align-self: flex-start;
-      margin-top: 4px;
+      margin-bottom: 10px;
     }
     .countdown-live {
       font-family: 'Playfair Display', serif;
-      font-size: clamp(24px, 4vw, 36px);
+      font-size: 18px;
       font-weight: 700;
       font-style: italic;
       color: var(--gold-light);
-      margin-top: 24px;
+      margin-top: 16px;
       letter-spacing: 2px;
     }
 
@@ -298,6 +297,27 @@
     }
     .sim-banner.show { display: flex; }
     .sim-banner strong { color: var(--gold); }
+
+    /* ─── WHAT IF BUTTON ─── */
+    .whatif-link-btn {
+      display: inline-block;
+      padding: 14px 32px;
+      background: transparent;
+      border: 1px solid rgba(201,168,76,0.5);
+      border-radius: 4px;
+      color: var(--gold-light);
+      font-family: 'Source Serif 4', serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .whatif-link-btn:hover {
+      background: rgba(201,168,76,0.1);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
 
     /* ─── SEARCH BOX ─── */
     .search-wrap {
@@ -697,40 +717,18 @@
         <a href="#" onclick="document.getElementById('config-banner').style.display='none'">Dismiss</a>
       </div>
 
-      <!-- What If Simulator -->
-      <div class="section-header">
-        <h2 class="section-title">What If?</h2>
-        <div class="section-line"></div>
-      </div>
-      <div class="whatif-wrap">
-        <p class="whatif-intro">Simulate a golfer's score to see how the leaderboard would change. Pick any golfer in the field and enter a hypothetical score to par.</p>
-        <div class="whatif-controls">
-          <div class="whatif-field">
-            <label>Golfer</label>
-            <div class="whatif-suggestions">
-              <input class="whatif-input" id="whatif-name" type="text" placeholder="e.g. Bryson DeChambeau" oninput="whatifNameInput(this.value)" autocomplete="off" />
-              <div class="whatif-dropdown" id="whatif-dropdown"></div>
-            </div>
-          </div>
-          <div class="whatif-field" style="max-width:140px">
-            <label>Score to Par</label>
-            <input class="whatif-input" id="whatif-score" type="number" placeholder="e.g. -13" />
-          </div>
-          <button class="whatif-btn" onclick="runWhatIf()">Simulate</button>
-          <button class="whatif-btn reset" id="whatif-reset" onclick="resetWhatIf()" style="display:none">✕ Reset</button>
-        </div>
+      <!-- What If Button -->
+      <div style="text-align:center; margin-bottom: 40px;">
+        <a href="whatif.html" class="whatif-link-btn">
+          🔮 Simulate a "What If" Scenario
+        </a>
+        <p style="font-size:12px;color:rgba(245,240,232,0.35);margin-top:10px;letter-spacing:0.5px;">See how the leaderboard changes with a hypothetical score</p>
       </div>
 
       <!-- Pool Standings -->
       <div class="section-header">
         <h2 class="section-title">Pool Standings</h2>
         <div class="section-line"></div>
-      </div>
-
-      <!-- Sim banner -->
-      <div class="sim-banner" id="sim-banner">
-        <span>⚠️ Simulated leaderboard — <strong id="sim-banner-text"></strong></span>
-        <button class="whatif-btn reset" onclick="resetWhatIf()" style="height:32px;padding:6px 16px;font-size:12px">✕ Reset</button>
       </div>
 
       <div class="search-wrap">

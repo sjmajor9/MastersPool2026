@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>What If? · Masters Pool 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Serif+4:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green-deep: #1a3a2a;
+      --green-mid: #2d5a3d;
+      --gold: #c9a84c;
+      --gold-light: #e8c96a;
+      --cream: #f5f0e8;
+      --white: #fdfcf9;
+      --text-light: #6a6a6a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--green-deep);
+      color: var(--cream);
+      font-family: 'Source Serif 4', Georgia, serif;
+      min-height: 100vh;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      position: relative;
+      background: linear-gradient(160deg, #0e2218 0%, #1a3a2a 40%, #2d5a3d 100%);
+      padding: 40px 20px 30px;
+      text-align: center;
+      border-bottom: 3px solid var(--gold);
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 50%, rgba(201,168,76,0.05) 0%, transparent 60%);
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(201,168,76,0.7);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--gold); }
+    .hero-flag {
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 8px;
+      font-weight: 300;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 6vw, 56px);
+      font-weight: 900;
+      color: var(--white);
+      line-height: 1;
+    }
+    .hero h1 em { font-style: italic; color: var(--gold); }
+    .hero-sub {
+      font-size: 13px;
+      color: rgba(245,240,232,0.5);
+      margin-top: 10px;
+      letter-spacing: 1px;
+    }
+
+    /* ─── LAYOUT ─── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    /* ─── SIMULATOR PANEL ─── */
+    .sim-panel {
+      background: rgba(201,168,76,0.06);
+      border: 1px solid rgba(201,168,76,0.25);
+      border-radius: 4px;
+      padding: 28px;
+      margin-bottom: 30px;
+    }
+    .sim-intro {
+      font-size: 14px;
+      color: rgba(245,240,232,0.55);
+      margin-bottom: 22px;
+      line-height: 1.6;
+    }
+    .sim-controls {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .sim-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 180px;
+    }
+    .sim-field label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .sim-suggestions { position: relative; }
+    .sim-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(201,168,76,0.25);
+      border-radius: 4px;
+      padding: 11px 14px;
+      font-size: 14px;
+      color: var(--cream);
+      font-family: 'Source Serif 4', serif;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .sim-input::placeholder { color: rgba(245,240,232,0.25); }
+    .sim-input:focus { border-color: rgba(201,168,76,0.6); }
+    .sim-dropdown {
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      background: #1e3d2d;
+      border: 1px solid rgba(201,168,76,0.3);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      z-index: 100;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+    .sim-dropdown.show { display: block; }
+    .sim-dropdown-item {
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--cream);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.1s;
+    }
+    .sim-dropdown-item:hover { background: rgba(201,168,76,0.1); }
+    .sim-dropdown-item:last-child { border-bottom: none; }
+    .sim-btn {
+      padding: 11px 28px;
+      background: var(--gold);
+      color: var(--green-deep);
+      border: none;
+      border-radius: 4px;
+      font-family: 'Source Serif 4', serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: background 0.15s;
+      height: 44px;
+      white-space: nowrap;
+    }
+    .sim-btn:hover { background: var(--gold-light); }
+    .sim-btn.reset {
+      background: transparent;
+      border: 1px solid rgba(201,168,76,0.3);
+      color: var(--gold);
+    }
+    .sim-btn.reset:hover { background: rgba(201,168,76,0.1); }
+
+    /* ─── SIM BANNER ─── */
+    .sim-banner {
+      display: none;
+      background: rgba(201,168,76,0.12);
+      border: 1px solid rgba(201,168,76,0.4);
+      border-radius: 4px;
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: var(--gold-light);
+      letter-spacing: 0.5px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .sim-banner.show { display: flex; }
+    .sim-banner strong { color: var(--gold); }
+
+    /* ─── SECTION HEADERS ─── */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--cream);
+      white-space: nowrap;
+    }
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, rgba(201,168,76,0.4), transparent);
+    }
+
+    /* ─── POOL TABLE ─── */
+    .pool-table-wrap {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 50px;
+    }
+    .pool-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .pool-table thead tr {
+      background: rgba(201,168,76,0.12);
+      border-bottom: 1px solid rgba(201,168,76,0.3);
+    }
+    .pool-table th {
+      padding: 14px 16px;
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .pool-table th.center, .pool-table td.center { text-align: center; }
+    .pool-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.15s;
+    }
+    .pool-table tbody tr:last-child { border-bottom: none; }
+    .pool-table td {
+      padding: 14px 16px;
+      font-size: 14px;
+      color: var(--cream);
+    }
+    .rank-cell {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold);
+      width: 50px;
+    }
+    .entry-name { font-weight: 600; font-size: 15px; }
+    .golfers-mini { font-size: 12px; color: rgba(245,240,232,0.5); margin-top: 3px; }
+    .score-cell {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .score-cell.under { color: #5dba7a; }
+    .score-cell.over  { color: #d96060; }
+    .score-cell.even  { color: var(--cream); }
+    .cut-pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .cut-pill.made    { background: rgba(45,110,62,0.3); color: #7de09a; border: 1px solid rgba(45,110,62,0.5); }
+    .cut-pill.missed  { background: rgba(139,32,32,0.3); color: #e07d7d; border: 1px solid rgba(139,32,32,0.5); }
+    .cut-pill.pending { background: rgba(201,168,76,0.15); color: var(--gold-light); border: 1px solid rgba(201,168,76,0.3); }
+
+    /* ─── RANK CHANGE ─── */
+    .rank-change {
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    .rank-change.up   { color: #5dba7a; }
+    .rank-change.down { color: #d96060; }
+    .rank-change.same { color: rgba(245,240,232,0.3); }
+
+    /* ─── LOADING ─── */
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(245,240,232,0.4);
+    }
+    .loading-spinner {
+      width: 32px; height: 32px;
+      border: 2px solid rgba(201,168,76,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-msg {
+      background: rgba(139,32,32,0.2);
+      border: 1px solid rgba(139,32,32,0.4);
+      border-radius: 4px;
+      padding: 16px 20px;
+      color: #e07d7d;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      border-top: 1px solid rgba(201,168,76,0.15);
+      font-size: 12px;
+      color: rgba(245,240,232,0.3);
+      letter-spacing: 1px;
+    }
+
+    @media (max-width: 600px) {
+      .pool-table td, .pool-table th { padding: 10px; }
+      .golfers-mini { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="hero">
+    <div style="position:relative;z-index:1">
+      <a href="index.html" class="back-link">← Back to Leaderboard</a>
+      <div class="hero-flag">Masters Pool 2026</div>
+      <h1><em>What If?</em></h1>
+      <p class="hero-sub">Simulate a golfer's score · See how the leaderboard changes</p>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Simulator Panel -->
+    <div class="sim-panel">
+      <p class="sim-intro">
+        Pick any golfer in the field, enter a hypothetical score to par, and hit Simulate.
+        The leaderboard below will instantly recalculate to show where every entry would stand.
+      </p>
+      <div class="sim-controls">
+        <div class="sim-field">
+          <label>Golfer</label>
+          <div class="sim-suggestions">
+            <input class="sim-input" id="sim-name" type="text" placeholder="e.g. Bryson DeChambeau" oninput="simNameInput(this.value)" autocomplete="off" />
+            <div class="sim-dropdown" id="sim-dropdown"></div>
+          </div>
+        </div>
+        <div class="sim-field" style="max-width:150px">
+          <label>Score to Par</label>
+          <input class="sim-input" id="sim-score" type="number" placeholder="e.g. -13" />
+        </div>
+        <button class="sim-btn" onclick="runSim()">Simulate</button>
+        <button class="sim-btn reset" id="sim-reset" onclick="resetSim()" style="display:none">✕ Reset</button>
+      </div>
+    </div>
+
+    <!-- Sim Banner -->
+    <div class="sim-banner" id="sim-banner">
+      <span>⚠️ Simulated leaderboard — <strong id="sim-banner-text"></strong></span>
+      <button class="sim-btn reset" onclick="resetSim()" style="height:32px;padding:6px 16px;font-size:12px">✕ Reset</button>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="section-header">
+      <h2 class="section-title" id="lb-title">Live Leaderboard</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="pool-table-wrap">
+      <div id="pool-loading" class="loading-state">
+        <div class="loading-spinner"></div>
+        <div>Loading entries…</div>
+      </div>
+      <div id="pool-error" class="error-msg" style="display:none"></div>
+      <table class="pool-table" id="pool-table" style="display:none">
+        <thead>
+          <tr>
+            <th>Pos</th>
+            <th>Entrant</th>
+            <th class="center">Score</th>
+            <th class="center">Sim Score</th>
+            <th class="center">Change</th>
+            <th class="center">Cut</th>
+          </tr>
+        </thead>
+        <tbody id="pool-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <footer>
+    Masters Pool 2026 · What If Simulator · <a href="index.html" style="color:var(--gold);text-decoration:none">Back to Live Leaderboard</a>
+  </footer>
+
+<script>
+/* ══════════════════════════════════════════════
+   Config — must match index.html
+══════════════════════════════════════════════ */
+const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuR-tPJNG0fEnwRodhmGIp4cJRTvK9h6LkuDgUOnQOpigzFvtO4IaClTesF7NRQmQp6IakObH01UkC/pub?gid=2143772572&single=true&output=csv';
+
+const COL = {
+  name: 0, email: 1,
+  golfer1: 2, golfer2: 3, golfer3: 4,
+  golfer4: 5, golfer5: 6, golfer6: 7,
+  tiebreaker: 8
+};
+
+let allEntries = [];
+let espnScores = {};
+let simOverride = null;
+let liveRanks = {}; // name → live rank (before sim)
+
+/* ── Helpers ───────────────────────────────── */
+function fmtScore(n) {
+  if (n === null || n === undefined || isNaN(n)) return '–';
+  if (n === 0) return 'E';
+  return n > 0 ? `+${n}` : `${n}`;
+}
+function scoreClass(n) {
+  if (n === null || isNaN(n)) return '';
+  if (n < 0) return 'under';
+  if (n > 0) return 'over';
+  return 'even';
+}
+function parseName(r) { return (r || '').trim().toLowerCase(); }
+
+function lookupGolfer(name) {
+  const key = parseName(name);
+  if (simOverride && key === simOverride.name) {
+    const real = Object.entries(espnScores).find(([k]) => parseName(k) === key);
+    const base = real ? real[1] : { pos: '–', today: '–', thru: '–', status: 'active' };
+    return { ...base, score: simOverride.score };
+  }
+  for (const [k, v] of Object.entries(espnScores)) {
+    if (parseName(k) === key) return v;
+  }
+  return null;
+}
+
+/* ── CSV Parsing ───────────────────────────── */
+function parseCSVLine(line) {
+  const result = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (ch === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+async function fetchEntries() {
+  try {
+    const res = await fetch(SHEETS_CSV_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const csv = await res.text();
+    const lines = csv.trim().split('\n').slice(1);
+    allEntries = lines.map(line => {
+      const cols = parseCSVLine(line);
+      const golfers = [cols[COL.golfer1],cols[COL.golfer2],cols[COL.golfer3],
+                       cols[COL.golfer4],cols[COL.golfer5],cols[COL.golfer6]]
+        .map(g => (g||'').trim()).filter(Boolean);
+      return { name:(cols[COL.name]||'').trim(), golfers, tiebreaker: parseFloat(cols[COL.tiebreaker])||0 };
+    }).filter(e => e.name);
+  } catch(err) {
+    document.getElementById('pool-loading').style.display = 'none';
+    document.getElementById('pool-error').style.display = 'block';
+    document.getElementById('pool-error').textContent = `Could not load entries: ${err.message}`;
+  }
+}
+
+/* ── ESPN ──────────────────────────────────── */
+async function fetchESPN() {
+  const PROXY = 'https://corsproxy.io/?';
+  const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
+  try {
+    const res = await fetch(PROXY + encodeURIComponent(ESPN_URL));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const event = (data.events||[]).find(e => e.name?.toLowerCase().includes('master')) || (data.events||[])[0];
+    if (!event) throw new Error('No event');
+    const competitors = event.competitions?.[0]?.competitors || [];
+    espnScores = {};
+    competitors.forEach(c => {
+      const name = c.athlete?.displayName || 'Unknown';
+      const scoreStr = c.score || 'E';
+      const score = scoreStr === 'E' ? 0 : parseInt(scoreStr);
+      const isCut = c.status?.type?.id === '3' || (c.status?.displayValue||'').toLowerCase().includes('cut');
+      espnScores[name] = {
+        score: isNaN(score) ? null : score,
+        pos: c.status?.position?.displayName || '–',
+        today: c.linescores?.[c.linescores.length-1]?.displayValue || '–',
+        thru: c.status?.thru || c.status?.displayValue || '–',
+        status: isCut ? 'cut' : 'active'
+      };
+    });
+  } catch(e) { /* ESPN unavailable */ }
+}
+
+/* ── Score entry ───────────────────────────── */
+function scoreEntry(entry) {
+  const scored = entry.golfers.map(g => {
+    const data = lookupGolfer(g);
+    return { name: g, score: data?.score ?? null, status: data?.status || 'pending' };
+  });
+  const active = scored.filter(g => g.status !== 'cut');
+  const cutMissed = scored.filter(g => g.status === 'cut');
+  const countable = active.filter(g => g.score !== null).sort((a,b) => a.score - b.score).slice(0,4);
+  const totalScore = countable.length >= 4 ? countable.reduce((s,g) => s + g.score, 0) : null;
+  const madeCut = active.length >= 4;
+  return { totalScore, madeCut, cutMissed, countable };
+}
+
+/* ── Render ────────────────────────────────── */
+function renderTable(isSimulating) {
+  document.getElementById('pool-loading').style.display = 'none';
+
+  const scored = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+  scored.sort((a,b) => {
+    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
+    if (a.totalScore === null && b.totalScore === null) return a.entry.tiebreaker - b.entry.tiebreaker;
+    if (a.totalScore === null) return 1;
+    if (b.totalScore === null) return -1;
+    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
+    return a.entry.tiebreaker - b.entry.tiebreaker;
+  });
+
+  let pos = 1;
+  scored.forEach((s, i) => {
+    s.rank = pos;
+    if (i < scored.length - 1) {
+      const next = scored[i+1];
+      if (s.totalScore !== null && next.totalScore === s.totalScore && s.madeCut === next.madeCut) {
+        // tie
+      } else { pos = i + 2; }
+    }
+  });
+
+  // Store live ranks on first (non-sim) render
+  if (!isSimulating) {
+    liveRanks = {};
+    scored.forEach(s => liveRanks[s.entry.name] = s.rank);
+  }
+
+  const tbody = document.getElementById('pool-tbody');
+
+  // Update column headers based on sim state
+  const thead = document.querySelector('.pool-table thead tr');
+  if (isSimulating) {
+    thead.innerHTML = `
+      <th>Pos</th><th>Entrant</th>
+      <th class="center">Sim Score</th>
+      <th class="center">Live Score</th>
+      <th class="center">Move</th>
+      <th class="center">Cut</th>`;
+  } else {
+    thead.innerHTML = `
+      <th>Pos</th><th>Entrant</th>
+      <th class="center">Score</th>
+      <th class="center">Cut</th>`;
+  }
+
+  tbody.innerHTML = scored.map(s => {
+    const { entry, totalScore, madeCut, countable } = s;
+    const cutPill = madeCut
+      ? `<span class="cut-pill made">Made Cut</span>`
+      : (s.cutMissed.length >= 3 ? `<span class="cut-pill missed">MC</span>` : `<span class="cut-pill pending">Pending</span>`);
+    const topNames = countable.map(g => g.name).join(', ');
+
+    if (isSimulating) {
+      const liveRank = liveRanks[entry.name] || s.rank;
+      const diff = liveRank - s.rank;
+      let changeHtml = `<span class="rank-change same">—</span>`;
+      if (diff > 0) changeHtml = `<span class="rank-change up">▲ ${diff}</span>`;
+      if (diff < 0) changeHtml = `<span class="rank-change down">▼ ${Math.abs(diff)}</span>`;
+
+      return `<tr>
+        <td class="rank-cell">${s.rank}</td>
+        <td>
+          <div class="entry-name">${entry.name}</div>
+          <div class="golfers-mini">${topNames || entry.golfers.slice(0,4).join(', ')}</div>
+        </td>
+        <td class="center score-cell ${scoreClass(totalScore)}">${fmtScore(totalScore)}</td>
+        <td class="center" style="font-size:13px;color:rgba(245,240,232,0.45)">${liveRanks[entry.name] ? `Rank ${liveRanks[entry.name]}` : '–'}</td>
+        <td class="center">${changeHtml}</td>
+        <td class="center">${cutPill}</td>
+      </tr>`;
+    } else {
+      return `<tr>
+        <td class="rank-cell">${s.rank}</td>
+        <td>
+          <div class="entry-name">${entry.name}</div>
+          <div class="golfers-mini">${topNames || entry.golfers.slice(0,4).join(', ')}</div>
+        </td>
+        <td class="center score-cell ${scoreClass(totalScore)}">${fmtScore(totalScore)}</td>
+        <td class="center">${cutPill}</td>
+      </tr>`;
+    }
+  }).join('');
+
+  document.getElementById('pool-table').style.display = 'table';
+  document.getElementById('lb-title').textContent = isSimulating ? 'Simulated Leaderboard' : 'Live Leaderboard';
+}
+
+/* ── Simulator controls ────────────────────── */
+function simNameInput(val) {
+  const dropdown = document.getElementById('sim-dropdown');
+  const q = val.trim().toLowerCase();
+  if (!q || q.length < 2) { dropdown.classList.remove('show'); return; }
+  const allNames = new Set([...Object.keys(espnScores), ...allEntries.flatMap(e => e.golfers)]);
+  const matches = [...allNames].filter(n => n.toLowerCase().includes(q)).slice(0, 8);
+  if (!matches.length) { dropdown.classList.remove('show'); return; }
+  dropdown.innerHTML = matches.map(n =>
+    `<div class="sim-dropdown-item" onclick="selectSimName('${n.replace(/'/g,"\\'")}'">${n}</div>`
+  ).join('');
+  dropdown.classList.add('show');
+}
+
+function selectSimName(name) {
+  document.getElementById('sim-name').value = name;
+  document.getElementById('sim-dropdown').classList.remove('show');
+}
+
+function runSim() {
+  const name = document.getElementById('sim-name').value.trim();
+  const scoreVal = document.getElementById('sim-score').value.trim();
+  if (!name) { alert('Please enter a golfer name.'); return; }
+  if (scoreVal === '') { alert('Please enter a score to par.'); return; }
+  const score = parseInt(scoreVal);
+  if (isNaN(score)) { alert('Please enter a valid number.'); return; }
+
+  simOverride = { name: name.toLowerCase(), score };
+  document.getElementById('sim-banner').classList.add('show');
+  document.getElementById('sim-banner-text').textContent = `${name} set to ${fmtScore(score)}`;
+  document.getElementById('sim-reset').style.display = 'inline-block';
+  document.getElementById('sim-dropdown').classList.remove('show');
+  renderTable(true);
+}
+
+function resetSim() {
+  simOverride = null;
+  document.getElementById('sim-banner').classList.remove('show');
+  document.getElementById('sim-reset').style.display = 'none';
+  document.getElementById('sim-name').value = '';
+  document.getElementById('sim-score').value = '';
+  renderTable(false);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.sim-suggestions')) {
+    document.getElementById('sim-dropdown')?.classList.remove('show');
+  }
+});
+
+/* ── Init ──────────────────────────────────── */
+async function init() {
+  await Promise.all([fetchEntries(), fetchESPN()]);
+  renderTable(false);
+}
+
+init();
+</script>
+</body>
+</html>
