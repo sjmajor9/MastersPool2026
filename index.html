@@ -86,6 +86,51 @@
       letter-spacing: 1px;
     }
 
+    /* ─── COUNTDOWN ─── */
+    .countdown-wrap {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+    .countdown-block {
+      text-align: center;
+      min-width: 70px;
+    }
+    .countdown-num {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 6vw, 52px);
+      font-weight: 900;
+      color: var(--white);
+      line-height: 1;
+    }
+    .countdown-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(201,168,76,0.7);
+      margin-top: 4px;
+    }
+    .countdown-sep {
+      font-family: 'Playfair Display', serif;
+      font-size: 40px;
+      font-weight: 900;
+      color: rgba(201,168,76,0.3);
+      line-height: 1.1;
+      align-self: flex-start;
+      margin-top: 4px;
+    }
+    .countdown-live {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 700;
+      font-style: italic;
+      color: var(--gold-light);
+      margin-top: 24px;
+      letter-spacing: 2px;
+    }
+
     /* ─── LIVE BADGE ─── */
     .live-badge {
       display: inline-flex;
@@ -136,6 +181,123 @@
       height: 1px;
       background: linear-gradient(to right, rgba(201,168,76,0.4), transparent);
     }
+
+    /* ─── WHAT IF SIMULATOR ─── */
+    .whatif-wrap {
+      background: rgba(201,168,76,0.06);
+      border: 1px solid rgba(201,168,76,0.25);
+      border-radius: 4px;
+      padding: 24px;
+      margin-bottom: 50px;
+    }
+    .whatif-intro {
+      font-size: 13px;
+      color: rgba(245,240,232,0.5);
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+    }
+    .whatif-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .whatif-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 180px;
+    }
+    .whatif-field label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .whatif-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(201,168,76,0.25);
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--cream);
+      font-family: 'Source Serif 4', serif;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .whatif-input::placeholder { color: rgba(245,240,232,0.25); }
+    .whatif-input:focus { border-color: rgba(201,168,76,0.6); }
+    .whatif-btn {
+      padding: 10px 24px;
+      background: var(--gold);
+      color: var(--green-deep);
+      border: none;
+      border-radius: 4px;
+      font-family: 'Source Serif 4', serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      height: 42px;
+    }
+    .whatif-btn:hover { background: var(--gold-light); }
+    .whatif-btn.reset {
+      background: transparent;
+      border: 1px solid rgba(201,168,76,0.3);
+      color: var(--gold);
+    }
+    .whatif-btn.reset:hover { background: rgba(201,168,76,0.1); }
+    .whatif-suggestions {
+      position: relative;
+    }
+    .whatif-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: #1e3d2d;
+      border: 1px solid rgba(201,168,76,0.3);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      z-index: 100;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+    .whatif-dropdown.show { display: block; }
+    .whatif-dropdown-item {
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--cream);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.1s;
+    }
+    .whatif-dropdown-item:hover { background: rgba(201,168,76,0.1); }
+    .whatif-dropdown-item:last-child { border-bottom: none; }
+
+    /* Simulated leaderboard banner */
+    .sim-banner {
+      display: none;
+      background: rgba(201,168,76,0.12);
+      border: 1px solid rgba(201,168,76,0.4);
+      border-radius: 4px;
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: var(--gold-light);
+      letter-spacing: 0.5px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .sim-banner.show { display: flex; }
+    .sim-banner strong { color: var(--gold); }
 
     /* ─── SEARCH BOX ─── */
     .search-wrap {
@@ -508,6 +670,18 @@
     <h1>The <em>Masters</em></h1>
     <div class="hero-year">POOL · 2026</div>
     <p class="hero-subtitle">Pick 6 · Best 4 Count · Lowest Score to Par Wins</p>
+
+    <div id="countdown-wrap" class="countdown-wrap">
+      <div class="countdown-block"><div class="countdown-num" id="cd-days">--</div><div class="countdown-label">Days</div></div>
+      <div class="countdown-sep">:</div>
+      <div class="countdown-block"><div class="countdown-num" id="cd-hours">--</div><div class="countdown-label">Hours</div></div>
+      <div class="countdown-sep">:</div>
+      <div class="countdown-block"><div class="countdown-num" id="cd-mins">--</div><div class="countdown-label">Minutes</div></div>
+      <div class="countdown-sep">:</div>
+      <div class="countdown-block"><div class="countdown-num" id="cd-secs">--</div><div class="countdown-label">Seconds</div></div>
+    </div>
+    <div id="countdown-live" class="countdown-live" style="display:none">⛳ The Masters is Underway</div>
+
     <div class="live-badge">
       <span class="live-dot"></span>
       <span id="last-updated">Loading scores…</span>
@@ -523,10 +697,40 @@
         <a href="#" onclick="document.getElementById('config-banner').style.display='none'">Dismiss</a>
       </div>
 
+      <!-- What If Simulator -->
+      <div class="section-header">
+        <h2 class="section-title">What If?</h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="whatif-wrap">
+        <p class="whatif-intro">Simulate a golfer's score to see how the leaderboard would change. Pick any golfer in the field and enter a hypothetical score to par.</p>
+        <div class="whatif-controls">
+          <div class="whatif-field">
+            <label>Golfer</label>
+            <div class="whatif-suggestions">
+              <input class="whatif-input" id="whatif-name" type="text" placeholder="e.g. Bryson DeChambeau" oninput="whatifNameInput(this.value)" autocomplete="off" />
+              <div class="whatif-dropdown" id="whatif-dropdown"></div>
+            </div>
+          </div>
+          <div class="whatif-field" style="max-width:140px">
+            <label>Score to Par</label>
+            <input class="whatif-input" id="whatif-score" type="number" placeholder="e.g. -13" />
+          </div>
+          <button class="whatif-btn" onclick="runWhatIf()">Simulate</button>
+          <button class="whatif-btn reset" id="whatif-reset" onclick="resetWhatIf()" style="display:none">✕ Reset</button>
+        </div>
+      </div>
+
       <!-- Pool Standings -->
       <div class="section-header">
         <h2 class="section-title">Pool Standings</h2>
         <div class="section-line"></div>
+      </div>
+
+      <!-- Sim banner -->
+      <div class="sim-banner" id="sim-banner">
+        <span>⚠️ Simulated leaderboard — <strong id="sim-banner-text"></strong></span>
+        <button class="whatif-btn reset" onclick="resetWhatIf()" style="height:32px;padding:6px 16px;font-size:12px">✕ Reset</button>
       </div>
 
       <div class="search-wrap">
@@ -675,6 +879,12 @@ function parseName(raw) {
 }
 function lookupGolfer(name) {
   const key = parseName(name);
+  // Apply What If override if active
+  if (whatIfOverride && key === whatIfOverride.name) {
+    const real = Object.entries(espnScores).find(([k]) => parseName(k) === key);
+    const base = real ? real[1] : { pos: '–', today: '–', thru: '–', status: 'active' };
+    return { ...base, score: whatIfOverride.score };
+  }
   for (const [k, v] of Object.entries(espnScores)) {
     if (parseName(k) === key) return v;
   }
@@ -843,7 +1053,7 @@ function filterPool(query) {
     const { entry, totalScore, madeCut, countable } = s;
     const cutPill = madeCut
       ? `<span class="cut-pill made">Made Cut</span>`
-      : (s.cutMissed.length > 2 ? `<span class="cut-pill missed">Missed Cut</span>` : `<span class="cut-pill pending">Pending</span>`);
+      : (s.cutMissed.length >= 3 ? `<span class="cut-pill missed">MC</span>` : `<span class="cut-pill pending">Pending</span>`);
     const topNames = countable.map(g => g.name).join(', ');
     return `<tr onclick="showEntry('${entry.name.replace(/'/g,"\\'")}')">
       <td class="rank-cell">${s.rank}</td>
@@ -990,8 +1200,110 @@ async function fetchESPN() {
   }
 }
 
+// ── What If Simulator ─────────────────────────────────────────
+let whatIfOverride = null; // { name, score }
+
+function whatifNameInput(val) {
+  const dropdown = document.getElementById('whatif-dropdown');
+  const q = val.trim().toLowerCase();
+  if (!q || q.length < 2) { dropdown.classList.remove('show'); return; }
+
+  // Build list from pool golfers + ESPN field
+  const allNames = new Set([
+    ...Object.keys(espnScores),
+    ...allEntries.flatMap(e => e.golfers)
+  ]);
+
+  const matches = [...allNames]
+    .filter(n => n.toLowerCase().includes(q))
+    .slice(0, 8);
+
+  if (!matches.length) { dropdown.classList.remove('show'); return; }
+
+  dropdown.innerHTML = matches.map(n =>
+    `<div class="whatif-dropdown-item" onclick="selectWhatIfName('${n.replace(/'/g, "\\'")}')">${n}</div>`
+  ).join('');
+  dropdown.classList.add('show');
+}
+
+function selectWhatIfName(name) {
+  document.getElementById('whatif-name').value = name;
+  document.getElementById('whatif-dropdown').classList.remove('show');
+}
+
+function runWhatIf() {
+  const name = document.getElementById('whatif-name').value.trim();
+  const scoreVal = document.getElementById('whatif-score').value.trim();
+
+  if (!name) { alert('Please enter a golfer name.'); return; }
+  if (scoreVal === '') { alert('Please enter a score to par.'); return; }
+
+  const score = parseInt(scoreVal);
+  if (isNaN(score)) { alert('Please enter a valid number for the score.'); return; }
+
+  whatIfOverride = { name: name.toLowerCase(), score };
+
+  // Show banner
+  const banner = document.getElementById('sim-banner');
+  banner.classList.add('show');
+  document.getElementById('sim-banner-text').textContent =
+    `${name} set to ${fmtScore(score)}`;
+
+  document.getElementById('whatif-reset').style.display = 'inline-block';
+  document.getElementById('whatif-dropdown').classList.remove('show');
+
+  renderPoolTable();
+}
+
+function resetWhatIf() {
+  whatIfOverride = null;
+  document.getElementById('sim-banner').classList.remove('show');
+  document.getElementById('whatif-reset').style.display = 'none';
+  document.getElementById('whatif-name').value = '';
+  document.getElementById('whatif-score').value = '';
+  renderPoolTable();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.whatif-suggestions')) {
+    document.getElementById('whatif-dropdown')?.classList.remove('show');
+  }
+});
+
+// ── Countdown Timer ───────────────────────────────────────────
+function startCountdown() {
+  // First tee shot: Thursday April 10, 2026 at 7:25 AM Eastern
+  const teeTime = new Date('2026-04-10T07:25:00-04:00');
+
+  function tick() {
+    const now = new Date();
+    const diff = teeTime - now;
+
+    if (diff <= 0) {
+      document.getElementById('countdown-wrap').style.display = 'none';
+      document.getElementById('countdown-live').style.display = 'block';
+      return;
+    }
+
+    const days  = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const mins  = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs  = Math.floor((diff % (1000 * 60)) / 1000);
+
+    document.getElementById('cd-days').textContent  = String(days).padStart(2, '0');
+    document.getElementById('cd-hours').textContent = String(hours).padStart(2, '0');
+    document.getElementById('cd-mins').textContent  = String(mins).padStart(2, '0');
+    document.getElementById('cd-secs').textContent  = String(secs).padStart(2, '0');
+  }
+
+  tick();
+  setInterval(tick, 1000);
+}
+
 // ── Init ──────────────────────────────────────────────────────
 async function init() {
+  startCountdown();
   await Promise.all([fetchEntries(), fetchESPN()]);
 
   // Check for entry param
