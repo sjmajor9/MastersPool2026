@@ -727,7 +727,7 @@
 
       <!-- Pool Standings -->
       <div class="section-header">
-        <h2 class="section-title">Pool Standings</h2>
+        <h2 class="section-title">Pool Standings — Top 50</h2>
         <div class="section-line"></div>
       </div>
 
@@ -1043,7 +1043,7 @@ function filterPool(query) {
   if (q) {
     countEl.textContent = `${pool.length} result${pool.length !== 1 ? 's' : ''} for "${query}"`;
   } else {
-    countEl.textContent = `Showing top 50 of ${allScoredEntries.length} entries`;
+    countEl.textContent = '';
   }
 
   tbody.innerHTML = pool.map(s => {
