@@ -427,6 +427,13 @@ let simOverride = null;
 let liveRanks = {}; // name → live rank (before sim)
 
 /* ── Helpers ───────────────────────────────── */
+function parseESPNScore(str) {
+  if (!str) return null;
+  const s = str.toString().trim().toUpperCase();
+  if (s === 'E' || s === 'EVEN' || s === '0') return 0;
+  const n = parseInt(s);
+  return isNaN(n) ? null : n;
+}
 function fmtScore(n) {
   if (n === null || n === undefined || isNaN(n)) return '–';
   if (n === 0) return 'E';
@@ -500,13 +507,12 @@ async function fetchESPN() {
     espnScores = {};
     competitors.forEach(c => {
       const name = c.athlete?.displayName || 'Unknown';
-      const scoreStr = c.score || 'E';
-      const score = scoreStr === 'E' ? 0 : parseInt(scoreStr);
+      const score = parseESPNScore((c.score || 'E').toString());
       const isCut = c.status?.type?.id === '3' || (c.status?.displayValue||'').toLowerCase().includes('cut');
       espnScores[name] = {
-        score: isNaN(score) ? null : score,
+        score,
         pos: c.status?.position?.displayName || '–',
-        today: c.linescores?.[c.linescores.length-1]?.displayValue || '–',
+        today: fmtScore(parseESPNScore((c.linescores?.[c.linescores.length-1]?.displayValue || 'E').toString())),
         thru: c.status?.thru || c.status?.displayValue || '–',
         status: isCut ? 'cut' : 'active'
       };

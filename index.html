@@ -859,6 +859,13 @@ function showEntry(name) {
 }
 
 // ── Score helpers ────────────────────────────────────────────
+function parseESPNScore(str) {
+  if (!str) return null;
+  const s = str.toString().trim().toUpperCase();
+  if (s === 'E' || s === 'EVEN' || s === '0') return 0;
+  const n = parseInt(s);
+  return isNaN(n) ? null : n;
+}
 function fmtScore(n) {
   if (n === null || n === undefined || isNaN(n)) return '–';
   if (n === 0) return 'E';
@@ -1148,15 +1155,16 @@ async function fetchESPN() {
     espnScores = {};
     const rows = competitors.map(c => {
       const name = c.athlete?.displayName || 'Unknown';
-      const scoreStr = c.score || 'E';
-      const score = scoreStr === 'E' ? 0 : parseInt(scoreStr);
+      const scoreStr = (c.score || 'E').toString().trim();
+      const score = parseESPNScore(scoreStr);
       const pos = c.status?.position?.displayName || c.status?.displayValue || '–';
-      const today = c.linescores?.[c.linescores.length - 1]?.displayValue || '–';
+      const todayStr = (c.linescores?.[c.linescores.length - 1]?.displayValue || 'E').toString().trim();
+      const today = parseESPNScore(todayStr);
       const thru = c.status?.thru || c.status?.displayValue || '–';
       const isCut = c.status?.type?.id === '3' || (c.status?.displayValue || '').toLowerCase().includes('cut');
 
-      espnScores[name] = { score: isNaN(score) ? null : score, pos, today, thru, status: isCut ? 'cut' : 'active' };
-      return { name, score: isNaN(score) ? null : score, pos, today, thru, isCut };
+      espnScores[name] = { score, pos, today: fmtScore(today), thru, status: isCut ? 'cut' : 'active' };
+      return { name, score, pos, today: fmtScore(today), thru, isCut };
     });
 
     rows.sort((a,b) => {
