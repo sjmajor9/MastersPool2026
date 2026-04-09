@@ -699,11 +699,7 @@
         <div class="hero-info-value" id="hero-weather-temp">—</div>
         <div class="hero-info-sub" id="hero-weather-cond">Loading…</div>
       </div>
-      <div class="hero-info-block">
-        <div class="hero-info-label">Entries Alive</div>
-        <div class="hero-info-value" id="hero-round">—</div>
-        <div class="hero-info-sub" id="hero-round-sub">In Progress</div>
-      </div>
+
     </div>
 
     <div class="live-badge">
@@ -1387,14 +1383,9 @@ async function fetchWeather() {
 function updateHeroLeader() {
   const leaderEl = document.getElementById('hero-leader');
   const scoreEl  = document.getElementById('hero-leader-score');
-  const roundEl  = document.getElementById('hero-round');
-  const roundSub = document.getElementById('hero-round-sub');
-
   if (!allEntries.length) {
     leaderEl.textContent = '—';
     scoreEl.textContent  = 'Loading…';
-    roundEl.textContent  = '—';
-    roundSub.textContent = '';
     return;
   }
 
@@ -1425,10 +1416,7 @@ function updateHeroLeader() {
   leaderEl.className = `hero-info-value ${cls}`;
   scoreEl.textContent = scoreVal !== null ? scoreStr : 'Pending';
 
-  // Show how many entries are in the pool
-  const alive = scored.filter(s => s.madeCut).length;
-  roundEl.textContent = `${alive}`;
-  roundSub.textContent = 'Entries Alive';
+
 }
 
 // ── Init ──────────────────────────────────────────────────────
