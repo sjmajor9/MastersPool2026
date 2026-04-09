@@ -1138,50 +1138,80 @@ function renderEntryDetail(name) {
   `;
 }
 
-// ── ESPN Leaderboard fetch ────────────────────────────────────
+// ── Masters.com + ESPN Leaderboard fetch ─────────────────────
 async function fetchESPN() {
-  const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
   const PROXIES = [
     'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
     'https://corsproxy.org/?'
   ];
 
-  try {
-    let res = null;
+  async function tryFetch(url) {
+    // Try direct first (works server-side / some browsers)
+    try {
+      const r = await fetch(url);
+      if (r.ok) return r;
+    } catch(e) {}
+    // Try each proxy
     for (const proxy of PROXIES) {
       try {
-        const attempt = await fetch(proxy + encodeURIComponent(ESPN_URL));
-        if (attempt.ok) { res = attempt; break; }
+        const r = await fetch(proxy + encodeURIComponent(url));
+        if (r.ok) return r;
       } catch(e) {}
     }
-    if (!res) throw new Error('All proxies failed — check back shortly');
-    const data = await res.json();
+    return null;
+  }
 
-    const events = data.events || [];
-    if (!events.length) throw new Error('No events found in ESPN response');
+  try {
+    let rows = null;
 
-    const event = events.find(e => e.name && e.name.toLowerCase().includes('master')) || events[0];
-    const comps = event.competitions || [];
-    if (!comps.length) throw new Error('No competition data');
+    // ── Try masters.com JSON feed first ──────────────────────
+    const mastersRes = await tryFetch('https://www.masters.com/api/v1/leaderboard');
+    if (mastersRes) {
+      try {
+        const mData = await mastersRes.json();
+        const players = mData?.data?.player || mData?.leaderboard?.players || mData?.players || [];
+        if (players.length) {
+          espnScores = {};
+          rows = players.map(p => {
+            const name = `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
+            const score = parseESPNScore(String(p.total || p.topar || 'E'));
+            const pos = String(p.pos || p.position || '–');
+            const today = parseESPNScore(String(p.today || p.round_score || 'E'));
+            const thru = String(p.thru || p.holes_played || '–');
+            const isCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
+            espnScores[name] = { score, pos, today: fmtScore(today), thru, status: isCut ? 'cut' : 'active' };
+            return { name, score, pos, today: fmtScore(today), thru, isCut };
+          });
+        }
+      } catch(e) {}
+    }
 
-    const comp = comps[0];
-    const competitors = comp.competitors || [];
+    // ── Fallback to ESPN API ──────────────────────────────────
+    if (!rows) {
+      const espnRes = await tryFetch('https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard');
+      if (!espnRes) throw new Error('All sources failed — check back shortly');
+      const data = await espnRes.json();
+      const events = data.events || [];
+      if (!events.length) throw new Error('No events found');
+      const event = events.find(e => e.name && e.name.toLowerCase().includes('master')) || events[0];
+      const competitors = event.competitions?.[0]?.competitors || [];
+      if (!competitors.length) throw new Error('No competitor data');
 
-    espnScores = {};
-    const rows = competitors.map(c => {
-      const name = c.athlete?.displayName || 'Unknown';
-      const scoreStr = (c.score || 'E').toString().trim();
-      const score = parseESPNScore(scoreStr);
-      const pos = c.status?.position?.displayName || c.status?.displayValue || '–';
-      const todayStr = (c.linescores?.[c.linescores.length - 1]?.displayValue || 'E').toString().trim();
-      const today = parseESPNScore(todayStr);
-      const thru = c.status?.thru || c.status?.displayValue || '–';
-      const isCut = c.status?.type?.id === '3' || (c.status?.displayValue || '').toLowerCase().includes('cut');
+      espnScores = {};
+      rows = competitors.map(c => {
+        const name = c.athlete?.displayName || 'Unknown';
+        const score = parseESPNScore((c.score || 'E').toString().trim());
+        const pos = c.status?.position?.displayName || c.status?.displayValue || '–';
+        const today = parseESPNScore((c.linescores?.[c.linescores.length - 1]?.displayValue || 'E').toString().trim());
+        const thru = c.status?.thru || c.status?.displayValue || '–';
+        const isCut = c.status?.type?.id === '3' || (c.status?.displayValue || '').toLowerCase().includes('cut');
+        espnScores[name] = { score, pos, today: fmtScore(today), thru, status: isCut ? 'cut' : 'active' };
+        return { name, score, pos, today: fmtScore(today), thru, isCut };
+      });
+    }
 
-      espnScores[name] = { score, pos, today: fmtScore(today), thru, status: isCut ? 'cut' : 'active' };
-      return { name, score, pos, today: fmtScore(today), thru, isCut };
-    });
+    if (!rows || !rows.length) throw new Error('No player data returned');
 
     rows.sort((a,b) => {
       if (a.isCut !== b.isCut) return a.isCut ? 1 : -1;
@@ -1210,7 +1240,6 @@ async function fetchESPN() {
     document.getElementById('last-updated').textContent =
       `Live · Updated ${now.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit'})}`;
 
-    // Re-render pool table with new scores
     if (allEntries.length) renderPoolTable();
     updateHeroLeader();
 
@@ -1221,8 +1250,15 @@ async function fetchESPN() {
     errEl.style.background = 'rgba(201,168,76,0.08)';
     errEl.style.borderColor = 'rgba(201,168,76,0.25)';
     errEl.style.color = 'var(--gold-light)';
-    errEl.innerHTML = '⛳ <strong>Live scores will appear here once the tournament begins.</strong><br><span style="font-size:12px;opacity:0.7">The 2026 Masters tees off Thursday April 9th at 7:25 AM ET — check back then!</span>';
-    document.getElementById('last-updated').textContent = 'Tournament starts April 9th · 7:25 AM ET';
+    const tourneyStart = new Date('2026-04-09T07:25:00-04:00');
+    const now = new Date();
+    if (now >= tourneyStart) {
+      errEl.innerHTML = '🔄 <strong>Fetching live scores… please wait.</strong><br><span style="font-size:12px;opacity:0.7">The Masters is underway — scores are loading. This page will retry automatically.</span>';
+      document.getElementById('last-updated').textContent = 'Retrying…';
+    } else {
+      errEl.innerHTML = '⛳ <strong>Live scores will appear here once the tournament begins.</strong><br><span style="font-size:12px;opacity:0.7">The 2026 Masters tees off Thursday April 9th at 7:25 AM ET — check back then!</span>';
+      document.getElementById('last-updated').textContent = 'Tournament starts April 9th · 7:25 AM ET';
+    }
   }
 }
 
@@ -1390,7 +1426,9 @@ async function init() {
     showEntry(decodeURIComponent(entryName));
   }
 
-  // Refresh every 3 minutes
+  // Refresh every 3 minutes — if scores failed, retry every 30 seconds until they load
+  let scoresLoaded = Object.keys(espnScores).length > 0;
+  
   setInterval(async () => {
     await fetchESPN();
     await fetchEntries();
@@ -1398,6 +1436,16 @@ async function init() {
     const entryName = getEntryParam();
     if (entryName) renderEntryDetail(decodeURIComponent(entryName));
   }, 3 * 60 * 1000);
+
+  // Fast retry every 30 seconds until scores load for the first time
+  const fastRetry = setInterval(async () => {
+    if (Object.keys(espnScores).length > 0) {
+      clearInterval(fastRetry); // scores loaded, stop fast retrying
+      return;
+    }
+    await fetchESPN();
+    updateHeroLeader();
+  }, 30 * 1000);
 
   // Refresh weather every 15 minutes
   setInterval(fetchWeather, 15 * 60 * 1000);
