@@ -940,7 +940,6 @@ function parseCSV(text) {
     ].map(g => (g||'').trim()).filter(Boolean);
     return {
       name: (cols[COL.name] || '').trim(),
-      email: (cols[COL.email] || '').trim(),
       golfers,
       tiebreaker: parseFloat(cols[COL.tiebreaker]) || 0
     };
@@ -1079,7 +1078,7 @@ function filterPool(query) {
       </td>
       <td class="center score-cell ${scoreClass(totalScore)}">${fmtScore(totalScore)}</td>
       <td class="center">${cutPill}</td>
-      <td class="center" style="font-size:13px;color:rgba(245,240,232,0.55)">${fmtScore(entry.tiebreaker)}</td>
+      <td class="center" style="font-size:13px;color:rgba(245,240,232,0.55)">${entry.tiebreaker !== 0 ? entry.tiebreaker : '–'}</td>
     </tr>`;
   }).join('');
 }
@@ -1104,7 +1103,7 @@ function renderEntryDetail(name) {
       <div>
         <div class="entry-hero-name">${entry.name}</div>
         <div class="entry-hero-meta">
-          ${cutStatus} &nbsp;·&nbsp; Tiebreaker: ${fmtScore(entry.tiebreaker)}
+          ${cutStatus} &nbsp;·&nbsp; Tiebreaker: ${entry.tiebreaker !== 0 ? entry.tiebreaker : '–'}
         </div>
       </div>
       <div class="entry-score-block">
@@ -1192,15 +1191,29 @@ async function fetchESPN() {
             const safeScore = (score !== null && Math.abs(score) <= 30) ? score : 0;
 
             const pos = String(p.pos || p.position || '–');
-            const rawToday = p.today ?? p.round_score ?? p.round_total ?? null;
-            const today = rawToday !== null ? parseESPNScore(String(rawToday)) : 0;
-            const safeToday = (today !== null && Math.abs(today) <= 20) ? today : 0;
 
-            const thru = String(p.thru || p.holes_played || p.holesPlayed || '–');
+            // Today's round score — keep as raw string first, parse if numeric
+            const rawToday = p.today ?? p.round_score ?? p.round_total ?? p.currentRound ?? null;
+            let todayDisplay = '–';
+            if (rawToday !== null && rawToday !== undefined) {
+              const parsedToday = parseESPNScore(String(rawToday));
+              if (parsedToday !== null && Math.abs(parsedToday) <= 20) {
+                todayDisplay = fmtScore(parsedToday);
+              } else if (String(rawToday).trim() !== '') {
+                todayDisplay = String(rawToday).trim();
+              }
+            }
+
+            // Thru holes — try multiple field names
+            const rawThru = p.thru ?? p.holes_played ?? p.holesPlayed ?? p.holesDone ?? p.hole ?? null;
+            const thru = (rawThru !== null && rawThru !== undefined && String(rawThru).trim() !== '' && String(rawThru) !== '0')
+              ? String(rawThru).trim()
+              : '–';
+
             const isCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
 
-            espnScores[name] = { score: safeScore, pos, today: fmtScore(safeToday), thru, status: isCut ? 'cut' : 'active' };
-            return { name, score: safeScore, pos, today: fmtScore(safeToday), thru, isCut };
+            espnScores[name] = { score: safeScore, pos, today: todayDisplay, thru, status: isCut ? 'cut' : 'active' };
+            return { name, score: safeScore, pos, today: todayDisplay, thru, isCut };
           });
         }
       } catch(e) { console.log('masters.com parse error:', e); }
@@ -1223,10 +1236,12 @@ async function fetchESPN() {
         const score = parseESPNScore((c.score || 'E').toString().trim());
         const pos = c.status?.position?.displayName || c.status?.displayValue || '–';
         const today = parseESPNScore((c.linescores?.[c.linescores.length - 1]?.displayValue || 'E').toString().trim());
-        const thru = c.status?.thru || c.status?.displayValue || '–';
+        const rawThru = c.status?.thru ?? c.status?.period ?? null;
+        const thru = (rawThru !== null && String(rawThru).trim() !== '') ? String(rawThru) : (c.status?.displayValue || '–');
         const isCut = c.status?.type?.id === '3' || (c.status?.displayValue || '').toLowerCase().includes('cut');
-        espnScores[name] = { score, pos, today: fmtScore(today), thru, status: isCut ? 'cut' : 'active' };
-        return { name, score, pos, today: fmtScore(today), thru, isCut };
+        const todayStr = fmtScore(today);
+        espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
+        return { name, score, pos, today: todayStr, thru, isCut };
       });
     }
 
