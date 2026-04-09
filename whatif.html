@@ -668,7 +668,7 @@ function simNameInput(val) {
   const matches = [...allNames].filter(n => n.toLowerCase().includes(q)).slice(0, 8);
   if (!matches.length) { dropdown.classList.remove('show'); return; }
   dropdown.innerHTML = matches.map(n =>
-    `<div class="sim-dropdown-item" onclick="selectSimName('${n.replace(/'/g,"\\'")}'">${n}</div>`
+    `<div class="sim-dropdown-item" data-name="${n.replace(/"/g,'&quot;')}">${n}</div>`
   ).join('');
   dropdown.classList.add('show');
 }
@@ -677,6 +677,15 @@ function selectSimName(name) {
   document.getElementById('sim-name').value = name;
   document.getElementById('sim-dropdown').classList.remove('show');
 }
+
+// mousedown fires before blur so dropdown stays open long enough
+document.addEventListener('mousedown', function(e) {
+  const item = e.target.closest('.sim-dropdown-item');
+  if (item && item.dataset.name) {
+    e.preventDefault();
+    selectSimName(item.dataset.name);
+  }
+});
 
 function runSim() {
   const name = document.getElementById('sim-name').value.trim();
@@ -725,13 +734,12 @@ function resetSim() {
   renderTable(false);
 }
 
+// Close dropdown when clicking outside
 document.addEventListener('click', e => {
-  // Small delay so dropdown item click fires before dropdown closes
-  setTimeout(() => {
-    if (!e.target.closest('.sim-suggestions') && !e.target.closest('.sim-dropdown-item')) {
-      document.getElementById('sim-dropdown')?.classList.remove('show');
-    }
-  }, 150);
+  if (!e.target.closest('.sim-suggestions')) {
+    const dd = document.getElementById('sim-dropdown');
+    if (dd) dd.classList.remove('show');
+  }
 });
 
 /* ── Init ──────────────────────────────────── */
