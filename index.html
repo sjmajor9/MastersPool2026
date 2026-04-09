@@ -690,7 +690,7 @@
 
     <div class="hero-infobar">
       <div class="hero-info-block">
-        <div class="hero-info-label">Current Leader</div>
+        <div class="hero-info-label">Pool Leader</div>
         <div class="hero-info-value" id="hero-leader">—</div>
         <div class="hero-info-sub" id="hero-leader-score">Loading…</div>
       </div>
@@ -700,7 +700,7 @@
         <div class="hero-info-sub" id="hero-weather-cond">Loading…</div>
       </div>
       <div class="hero-info-block">
-        <div class="hero-info-label">Round</div>
+        <div class="hero-info-label">Entries Alive</div>
         <div class="hero-info-value" id="hero-round">—</div>
         <div class="hero-info-sub" id="hero-round-sub">In Progress</div>
       </div>
@@ -1390,58 +1390,45 @@ function updateHeroLeader() {
   const roundEl  = document.getElementById('hero-round');
   const roundSub = document.getElementById('hero-round-sub');
 
-  if (!Object.keys(espnScores).length) {
+  if (!allEntries.length) {
     leaderEl.textContent = '—';
-    scoreEl.textContent  = 'Scores loading…';
+    scoreEl.textContent  = 'Loading…';
     roundEl.textContent  = '—';
     roundSub.textContent = '';
     return;
   }
 
-  // Find leader — lowest score among active players with a real score
-  const active = Object.entries(espnScores)
-    .filter(([,v]) => v.status !== 'cut' && v.score !== null && !isNaN(v.score))
-    .sort(([,a],[,b]) => a.score - b.score);
+  // Score all entries and find the pool leader
+  const scored = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+  scored.sort((a, b) => {
+    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
+    if (a.totalScore === null && b.totalScore === null) return a.entry.tiebreaker - b.entry.tiebreaker;
+    if (a.totalScore === null) return 1;
+    if (b.totalScore === null) return -1;
+    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
+    return a.entry.tiebreaker - b.entry.tiebreaker;
+  });
 
-  if (!active.length) {
-    leaderEl.textContent = '—';
-    scoreEl.textContent = 'No scores yet';
-    roundEl.textContent = '—';
-    roundSub.textContent = '';
-    return;
-  }
+  const leader = scored[0];
+  if (!leader) return;
 
-  const [name, data] = active[0];
-  const scoreVal = data.score;
+  const scoreVal = leader.totalScore;
   const scoreStr = fmtScore(scoreVal);
-  const cls = scoreVal < 0 ? 'under' : scoreVal > 0 ? 'over' : '';
+  const cls = scoreVal !== null && scoreVal < 0 ? 'under' : scoreVal !== null && scoreVal > 0 ? 'over' : '';
 
   // Check for ties
-  const tied = active.filter(([,v]) => v.score === scoreVal);
-  let displayName = name.split(' ').slice(-1)[0]; // last name only
+  const tied = scored.filter(s => s.totalScore === scoreVal && s.madeCut === leader.madeCut);
+  let displayName = leader.entry.name.split(' ').slice(-1)[0]; // last name
   if (tied.length > 1) displayName += ` +${tied.length - 1}`;
 
   leaderEl.textContent = displayName;
   leaderEl.className = `hero-info-value ${cls}`;
-  scoreEl.textContent = scoreStr;
+  scoreEl.textContent = scoreVal !== null ? scoreStr : 'Pending';
 
-  // Find the most advanced player to show round progress
-  const thruVals = active
-    .map(([,v]) => v.thru)
-    .filter(t => t && t !== '–' && t !== 'null' && t !== '');
-  
-  const mostAdvanced = thruVals.find(t => t === 'F') || thruVals[0] || '';
-
-  if (mostAdvanced === 'F') {
-    roundEl.textContent = 'Round 1';
-    roundSub.textContent = 'Complete';
-  } else if (mostAdvanced) {
-    roundEl.textContent = `Thru ${mostAdvanced}`;
-    roundSub.textContent = 'Round 1';
-  } else {
-    roundEl.textContent = 'Round 1';
-    roundSub.textContent = 'In Progress';
-  }
+  // Show how many entries are in the pool
+  const alive = scored.filter(s => s.madeCut).length;
+  roundEl.textContent = `${alive}`;
+  roundSub.textContent = 'Entries Alive';
 }
 
 // ── Init ──────────────────────────────────────────────────────
