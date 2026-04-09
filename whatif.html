@@ -132,6 +132,7 @@
       width: 100%;
     }
     .sim-input::placeholder { color: rgba(245,240,232,0.25); }
+
     .sim-input:focus { border-color: rgba(201,168,76,0.6); }
     .sim-dropdown {
       position: absolute;
@@ -140,12 +141,11 @@
       border: 1px solid rgba(201,168,76,0.3);
       border-top: none;
       border-radius: 0 0 4px 4px;
-      z-index: 100;
-      max-height: 200px;
+      z-index: 1000;
+      max-height: 220px;
       overflow-y: auto;
       display: none;
     }
-    .sim-dropdown.show { display: block; }
     .sim-dropdown-item {
       padding: 10px 14px;
       font-size: 14px;
@@ -355,9 +355,9 @@
       <div class="sim-controls">
         <div class="sim-field">
           <label>Golfer</label>
-          <div class="sim-suggestions">
-            <input class="sim-input" id="sim-name" type="text" placeholder="e.g. Bryson DeChambeau" list="golfer-list" />
-            <datalist id="golfer-list"></datalist>
+          <div class="sim-suggestions" id="sim-suggestions-wrap">
+            <input class="sim-input" id="sim-name" type="text" placeholder="Start typing a name…" autocomplete="off" />
+            <div class="sim-dropdown" id="sim-dropdown"></div>
           </div>
         </div>
         <div class="sim-field" style="max-width:150px">
@@ -660,13 +660,62 @@ function renderTable(isSimulating) {
 }
 
 /* ── Simulator controls ────────────────────── */
-// Populate datalist with golfer names for native browser autocomplete
-function populateGolferList() {
-  const datalist = document.getElementById('golfer-list');
-  if (!datalist) return;
-  const allNames = new Set([...Object.keys(espnScores), ...allEntries.flatMap(e => e.golfers)]);
-  datalist.innerHTML = [...allNames].sort().map(n => `<option value="${n}"></option>`).join('');
+// Build master golfer name list
+function getAllGolferNames() {
+  const allNames = new Set([
+    ...Object.keys(espnScores),
+    ...allEntries.flatMap(e => e.golfers)
+  ]);
+  return [...allNames].filter(n => n.trim()).sort();
 }
+
+function populateGolferList() {
+  // no-op now — names pulled dynamically on input
+}
+
+// Search input handler
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('sim-name');
+  const dropdown = document.getElementById('sim-dropdown');
+  if (!input || !dropdown) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q || q.length < 1) { dropdown.style.display = 'none'; return; }
+
+    const names = getAllGolferNames();
+    const matches = names.filter(n => n.toLowerCase().includes(q)).slice(0, 10);
+
+    if (!matches.length) { dropdown.style.display = 'none'; return; }
+
+    dropdown.innerHTML = '';
+    matches.forEach(name => {
+      const item = document.createElement('div');
+      item.className = 'sim-dropdown-item';
+      item.textContent = name;
+      item.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--cream);font-size:14px;';
+      // Use pointerdown so it fires before the input blur event
+      item.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        input.value = name;
+        dropdown.style.display = 'none';
+      });
+      item.addEventListener('mouseover', () => item.style.background = 'rgba(201,168,76,0.1)');
+      item.addEventListener('mouseout', () => item.style.background = '');
+      dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+  });
+
+  // Hide dropdown when clicking outside
+  document.addEventListener('pointerdown', (e) => {
+    if (!document.getElementById('sim-suggestions-wrap').contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+});
 
 function runSim() {
   const name = document.getElementById('sim-name').value.trim();
