@@ -356,7 +356,7 @@
         <div class="sim-field">
           <label>Golfer</label>
           <div class="sim-suggestions">
-            <input class="sim-input" id="sim-name" type="text" placeholder="e.g. Bryson DeChambeau" list="golfer-list" autocomplete="off" />
+            <input class="sim-input" id="sim-name" type="text" placeholder="e.g. Bryson DeChambeau" list="golfer-list" />
             <datalist id="golfer-list"></datalist>
           </div>
         </div>
@@ -665,7 +665,7 @@ function populateGolferList() {
   const datalist = document.getElementById('golfer-list');
   if (!datalist) return;
   const allNames = new Set([...Object.keys(espnScores), ...allEntries.flatMap(e => e.golfers)]);
-  datalist.innerHTML = [...allNames].map(n => `<option value="${n}">`).join('');
+  datalist.innerHTML = [...allNames].sort().map(n => `<option value="${n}"></option>`).join('');
 }
 
 function runSim() {
@@ -716,8 +716,10 @@ function resetSim() {
 
 /* ── Init ──────────────────────────────────── */
 async function init() {
-  await Promise.all([fetchEntries(), fetchESPN()]);
-  populateGolferList();
+  await fetchEntries();
+  populateGolferList(); // populate from sheet names immediately
+  await fetchESPN();
+  populateGolferList(); // repopulate with ESPN names added
   renderTable(false);
 }
 
