@@ -431,6 +431,8 @@ function parseESPNScore(str) {
   if (!str) return null;
   const s = str.toString().trim().toUpperCase();
   if (s === 'E' || s === 'EVEN' || s === '0') return 0;
+  // Tee times (e.g. "7:35 AM", "2:10 PM") — not yet started, treat as E
+  if (/^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(s)) return 0;
   const n = parseInt(s);
   return isNaN(n) ? null : n;
 }
@@ -495,11 +497,21 @@ async function fetchEntries() {
 
 /* ── ESPN ──────────────────────────────────── */
 async function fetchESPN() {
-  const PROXY = 'https://corsproxy.io/?';
   const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
+  const PROXIES = [
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.org/?'
+  ];
   try {
-    const res = await fetch(PROXY + encodeURIComponent(ESPN_URL));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    let res = null;
+    for (const proxy of PROXIES) {
+      try {
+        const attempt = await fetch(proxy + encodeURIComponent(ESPN_URL));
+        if (attempt.ok) { res = attempt; break; }
+      } catch(e) {}
+    }
+    if (!res) throw new Error('All proxies failed');
     const data = await res.json();
     const event = (data.events||[]).find(e => e.name?.toLowerCase().includes('master')) || (data.events||[])[0];
     if (!event) throw new Error('No event');
@@ -517,7 +529,9 @@ async function fetchESPN() {
         status: isCut ? 'cut' : 'active'
       };
     });
-  } catch(e) { /* ESPN unavailable */ }
+  } catch(e) {
+    // ESPN not yet available — tournament hasn't started
+  }
 }
 
 /* ── Score entry ───────────────────────────── */
