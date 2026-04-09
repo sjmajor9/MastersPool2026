@@ -356,8 +356,8 @@
         <div class="sim-field">
           <label>Golfer</label>
           <div class="sim-suggestions">
-            <input class="sim-input" id="sim-name" type="text" placeholder="e.g. Bryson DeChambeau" oninput="simNameInput(this.value)" autocomplete="off" />
-            <div class="sim-dropdown" id="sim-dropdown"></div>
+            <input class="sim-input" id="sim-name" type="text" placeholder="e.g. Bryson DeChambeau" list="golfer-list" autocomplete="off" />
+            <datalist id="golfer-list"></datalist>
           </div>
         </div>
         <div class="sim-field" style="max-width:150px">
@@ -660,32 +660,13 @@ function renderTable(isSimulating) {
 }
 
 /* ── Simulator controls ────────────────────── */
-function simNameInput(val) {
-  const dropdown = document.getElementById('sim-dropdown');
-  const q = val.trim().toLowerCase();
-  if (!q || q.length < 2) { dropdown.classList.remove('show'); return; }
+// Populate datalist with golfer names for native browser autocomplete
+function populateGolferList() {
+  const datalist = document.getElementById('golfer-list');
+  if (!datalist) return;
   const allNames = new Set([...Object.keys(espnScores), ...allEntries.flatMap(e => e.golfers)]);
-  const matches = [...allNames].filter(n => n.toLowerCase().includes(q)).slice(0, 8);
-  if (!matches.length) { dropdown.classList.remove('show'); return; }
-  dropdown.innerHTML = matches.map(n =>
-    `<div class="sim-dropdown-item" data-name="${n.replace(/"/g,'&quot;')}">${n}</div>`
-  ).join('');
-  dropdown.classList.add('show');
+  datalist.innerHTML = [...allNames].map(n => `<option value="${n}">`).join('');
 }
-
-function selectSimName(name) {
-  document.getElementById('sim-name').value = name;
-  document.getElementById('sim-dropdown').classList.remove('show');
-}
-
-// mousedown fires before blur so dropdown stays open long enough
-document.addEventListener('mousedown', function(e) {
-  const item = e.target.closest('.sim-dropdown-item');
-  if (item && item.dataset.name) {
-    e.preventDefault();
-    selectSimName(item.dataset.name);
-  }
-});
 
 function runSim() {
   const name = document.getElementById('sim-name').value.trim();
@@ -721,7 +702,6 @@ function runSim() {
   document.getElementById('sim-banner').classList.add('show');
   document.getElementById('sim-banner-text').textContent = `${name} set to ${fmtScore(score)}`;
   document.getElementById('sim-reset').style.display = 'inline-block';
-  document.getElementById('sim-dropdown').classList.remove('show');
   renderTable(true);
 }
 
@@ -734,17 +714,10 @@ function resetSim() {
   renderTable(false);
 }
 
-// Close dropdown when clicking outside
-document.addEventListener('click', e => {
-  if (!e.target.closest('.sim-suggestions')) {
-    const dd = document.getElementById('sim-dropdown');
-    if (dd) dd.classList.remove('show');
-  }
-});
-
 /* ── Init ──────────────────────────────────── */
 async function init() {
   await Promise.all([fetchEntries(), fetchESPN()]);
+  populateGolferList();
   renderTable(false);
 }
 
