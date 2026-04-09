@@ -889,16 +889,26 @@ function parseName(raw) {
 }
 function lookupGolfer(name) {
   const key = parseName(name);
+
+  // Fuzzy match helper — exact first, then last name
+  function findInScores(searchKey) {
+    for (const [k, v] of Object.entries(espnScores)) {
+      if (parseName(k) === searchKey) return v;
+    }
+    const lastName = searchKey.split(' ').pop();
+    for (const [k, v] of Object.entries(espnScores)) {
+      if (parseName(k).split(' ').pop() === lastName) return v;
+    }
+    return null;
+  }
+
   // Apply What If override if active
-  if (whatIfOverride && key === whatIfOverride.name) {
-    const real = Object.entries(espnScores).find(([k]) => parseName(k) === key);
-    const base = real ? real[1] : { pos: '–', today: '–', thru: '–', status: 'active' };
+  if (whatIfOverride && (key === whatIfOverride.name || key.split(' ').pop() === whatIfOverride.name.split(' ').pop())) {
+    const base = findInScores(whatIfOverride.name) || { pos: '–', today: '–', thru: '–', status: 'active' };
     return { ...base, score: whatIfOverride.score };
   }
-  for (const [k, v] of Object.entries(espnScores)) {
-    if (parseName(k) === key) return v;
-  }
-  return null;
+
+  return findInScores(key);
 }
 
 // ── Google Sheets CSV fetch ───────────────────────────────────
@@ -963,7 +973,7 @@ function scoreEntry(entry) {
       score: data ? data.score : null,
       pos: data ? data.pos : null,
       today: data ? data.today : null,
-      thru: data ? data.thru : null,
+      thru: data ? (data.thru || null) : null,
       status: data ? data.status : 'pending'
     };
   });
@@ -1120,17 +1130,19 @@ function renderEntryDetail(name) {
         const badge = isCounting
           ? `<span class="counting-badge">Counting</span>`
           : (isCut ? `<span class="cut-pill missed" style="font-size:10px">Cut</span>` : '');
+        const posDisplay = (g.pos && g.pos !== '–') ? `Position: ${g.pos}` : (g.score !== null ? 'Scoring' : 'Not yet started');
+        const thruDisplay = (g.thru && g.thru !== '–' && g.thru !== 'null') ? `Thru: ${g.thru}` : '';
         return `<div class="golfer-card ${cardClass}">
           <div class="golfer-card-header">
             <div>
               <div class="golfer-card-name">${g.name}</div>
-              <div class="golfer-card-pos">${g.pos ? `Position: ${g.pos}` : 'Score pending'}</div>
+              <div class="golfer-card-pos">${posDisplay}</div>
             </div>
             <div class="golfer-card-score ${scoreClass(g.score)}">${fmtScore(g.score)}</div>
           </div>
           <div class="golfer-card-status">
             ${badge}
-            ${g.thru ? `<span style="font-size:12px;color:rgba(245,240,232,0.4);margin-left:6px">Thru: ${g.thru}</span>` : ''}
+            ${thruDisplay ? `<span style="font-size:12px;color:rgba(245,240,232,0.4);margin-left:6px">${thruDisplay}</span>` : ''}
           </div>
         </div>`;
       }).join('')}
@@ -1382,46 +1394,53 @@ function updateHeroLeader() {
     leaderEl.textContent = '—';
     scoreEl.textContent  = 'Scores loading…';
     roundEl.textContent  = '—';
+    roundSub.textContent = '';
     return;
   }
 
-  // Find leader (lowest score among active players)
+  // Find leader — lowest score among active players with a real score
   const active = Object.entries(espnScores)
-    .filter(([,v]) => v.status !== 'cut' && v.score !== null)
+    .filter(([,v]) => v.status !== 'cut' && v.score !== null && !isNaN(v.score))
     .sort(([,a],[,b]) => a.score - b.score);
 
   if (!active.length) {
     leaderEl.textContent = '—';
     scoreEl.textContent = 'No scores yet';
+    roundEl.textContent = '—';
+    roundSub.textContent = '';
     return;
   }
 
   const [name, data] = active[0];
   const scoreVal = data.score;
-  const scoreStr = scoreVal === 0 ? 'E' : scoreVal > 0 ? `+${scoreVal}` : `${scoreVal}`;
-  const scoreClass = scoreVal < 0 ? 'under' : scoreVal > 0 ? 'over' : '';
+  const scoreStr = fmtScore(scoreVal);
+  const cls = scoreVal < 0 ? 'under' : scoreVal > 0 ? 'over' : '';
 
   // Check for ties
   const tied = active.filter(([,v]) => v.score === scoreVal);
-  const displayName = tied.length > 1
-    ? `${name.split(' ').pop()} + ${tied.length - 1}`
-    : name.split(' ').pop();
+  let displayName = name.split(' ').slice(-1)[0]; // last name only
+  if (tied.length > 1) displayName += ` +${tied.length - 1}`;
 
   leaderEl.textContent = displayName;
-  leaderEl.className = `hero-info-value ${scoreClass}`;
-  scoreEl.textContent = `${scoreStr} · Pos ${data.pos}`;
+  leaderEl.className = `hero-info-value ${cls}`;
+  scoreEl.textContent = scoreStr;
 
-  // Round info from thru
-  const thru = data.thru;
-  if (thru === 'F') {
-    roundEl.textContent = 'F';
-    roundSub.textContent = 'Round Complete';
-  } else if (thru) {
-    roundEl.textContent = `Thru ${thru}`;
-    roundSub.textContent = 'In Progress';
+  // Find the most advanced player to show round progress
+  const thruVals = active
+    .map(([,v]) => v.thru)
+    .filter(t => t && t !== '–' && t !== 'null' && t !== '');
+  
+  const mostAdvanced = thruVals.find(t => t === 'F') || thruVals[0] || '';
+
+  if (mostAdvanced === 'F') {
+    roundEl.textContent = 'Round 1';
+    roundSub.textContent = 'Complete';
+  } else if (mostAdvanced) {
+    roundEl.textContent = `Thru ${mostAdvanced}`;
+    roundSub.textContent = 'Round 1';
   } else {
-    roundEl.textContent = '—';
-    roundSub.textContent = 'Pending';
+    roundEl.textContent = 'Round 1';
+    roundSub.textContent = 'In Progress';
   }
 }
 
