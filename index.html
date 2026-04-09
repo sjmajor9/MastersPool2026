@@ -1175,16 +1175,27 @@ async function fetchESPN() {
           espnScores = {};
           rows = players.map(p => {
             const name = `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
-            const score = parseESPNScore(String(p.total || p.topar || 'E'));
+
+            // masters.com uses topar for score-to-par — never use p.total (that's gross strokes)
+            const rawScore = p.topar ?? p.to_par ?? p.overallPar ?? p.score_to_par ?? null;
+            const score = rawScore !== null ? parseESPNScore(String(rawScore)) : 0;
+
+            // Sanity check — gross stroke totals are 60-80+, to-par scores are -20 to +20
+            const safeScore = (score !== null && Math.abs(score) <= 30) ? score : 0;
+
             const pos = String(p.pos || p.position || '–');
-            const today = parseESPNScore(String(p.today || p.round_score || 'E'));
-            const thru = String(p.thru || p.holes_played || '–');
+            const rawToday = p.today ?? p.round_score ?? p.round_total ?? null;
+            const today = rawToday !== null ? parseESPNScore(String(rawToday)) : 0;
+            const safeToday = (today !== null && Math.abs(today) <= 20) ? today : 0;
+
+            const thru = String(p.thru || p.holes_played || p.holesPlayed || '–');
             const isCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
-            espnScores[name] = { score, pos, today: fmtScore(today), thru, status: isCut ? 'cut' : 'active' };
-            return { name, score, pos, today: fmtScore(today), thru, isCut };
+
+            espnScores[name] = { score: safeScore, pos, today: fmtScore(safeToday), thru, status: isCut ? 'cut' : 'active' };
+            return { name, score: safeScore, pos, today: fmtScore(safeToday), thru, isCut };
           });
         }
-      } catch(e) {}
+      } catch(e) { console.log('masters.com parse error:', e); }
     }
 
     // ── Fallback to ESPN API ──────────────────────────────────
