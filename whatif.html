@@ -451,15 +451,35 @@ function parseName(r) { return (r || '').trim().toLowerCase(); }
 
 function lookupGolfer(name) {
   const key = parseName(name);
-  if (simOverride && key === simOverride.name) {
-    const real = Object.entries(espnScores).find(([k]) => parseName(k) === key);
-    const base = real ? real[1] : { pos: '–', today: '–', thru: '–', status: 'active' };
+
+  // Fuzzy match — check exact first, then last-name-only match
+  function findInScores(searchKey) {
+    // Exact match
+    for (const [k, v] of Object.entries(espnScores)) {
+      if (parseName(k) === searchKey) return [k, v];
+    }
+    // Last name match
+    const lastName = searchKey.split(' ').pop();
+    for (const [k, v] of Object.entries(espnScores)) {
+      if (parseName(k).split(' ').pop() === lastName) return [k, v];
+    }
+    return null;
+  }
+
+  // Check if this golfer is the sim override
+  const isOverride = simOverride && (
+    key === simOverride.name ||
+    key.split(' ').pop() === simOverride.name.split(' ').pop()
+  );
+
+  if (isOverride) {
+    const found = findInScores(simOverride.name);
+    const base = found ? found[1] : { pos: '–', today: '–', thru: '–', status: 'active' };
     return { ...base, score: simOverride.score };
   }
-  for (const [k, v] of Object.entries(espnScores)) {
-    if (parseName(k) === key) return v;
-  }
-  return null;
+
+  const found = findInScores(key);
+  return found ? found[1] : null;
 }
 
 /* ── CSV Parsing ───────────────────────────── */
@@ -666,6 +686,28 @@ function runSim() {
   const score = parseInt(scoreVal);
   if (isNaN(score)) { alert('Please enter a valid number.'); return; }
 
+  // Store live ranks BEFORE applying override so we can show movement
+  const preSim = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+  preSim.sort((a,b) => {
+    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
+    if (a.totalScore === null && b.totalScore === null) return a.entry.tiebreaker - b.entry.tiebreaker;
+    if (a.totalScore === null) return 1;
+    if (b.totalScore === null) return -1;
+    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
+    return a.entry.tiebreaker - b.entry.tiebreaker;
+  });
+  let lp = 1;
+  preSim.forEach((s, i) => {
+    s.rank = lp;
+    if (i < preSim.length - 1) {
+      const next = preSim[i+1];
+      if (s.totalScore !== null && next.totalScore === s.totalScore && s.madeCut === next.madeCut) {}
+      else { lp = i + 2; }
+    }
+  });
+  liveRanks = {};
+  preSim.forEach(s => liveRanks[s.entry.name] = s.rank);
+
   simOverride = { name: name.toLowerCase(), score };
   document.getElementById('sim-banner').classList.add('show');
   document.getElementById('sim-banner-text').textContent = `${name} set to ${fmtScore(score)}`;
@@ -684,9 +726,12 @@ function resetSim() {
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.sim-suggestions')) {
-    document.getElementById('sim-dropdown')?.classList.remove('show');
-  }
+  // Small delay so dropdown item click fires before dropdown closes
+  setTimeout(() => {
+    if (!e.target.closest('.sim-suggestions') && !e.target.closest('.sim-dropdown-item')) {
+      document.getElementById('sim-dropdown')?.classList.remove('show');
+    }
+  }, 150);
 });
 
 /* ── Init ──────────────────────────────────── */
