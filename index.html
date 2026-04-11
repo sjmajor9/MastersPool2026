@@ -1599,8 +1599,7 @@ function updateHeroLeader() {
   const cls = scoreVal !== null && scoreVal < 0 ? 'under' : scoreVal !== null && scoreVal > 0 ? 'over' : '';
 
   const tied = allScoredEntries.filter(s => s.totalScore === scoreVal && s.madeCut === leader.madeCut);
-  let displayName = leader.entry.name;
-  if (tied.length > 1) displayName += ` +${tied.length - 1}`;
+  let displayName = tied.length > 1 ? `${tied.length} Entries Tied` : leader.entry.name;
 
   leaderEl.textContent = displayName;
   leaderEl.className = `hero-info-value ${cls}`;
