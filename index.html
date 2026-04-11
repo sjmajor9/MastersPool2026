@@ -902,7 +902,21 @@ const COL = {
 // ESPN should be returning correct cut status for round 3+
 // CUT_LINE — reading cut status directly from ESPN API
 const CUT_LINE = null;
-const MISSED_CUT_PLAYERS = new Set(); // not used — relying on ESPN API
+const MISSED_CUT_PLAYERS = new Set([
+  // 2026 Masters missed cut — +4 cutline, 37 players
+  'bryson dechambeau', 'jj spaun', 'j.j. spaun', 'akshay bhatia',
+  'robert macintyre', 'cameron smith', 'min woo lee', 'nicolai hojgaard',
+  'nico echavarria', 'bubba watson', 'danny willett', 'zach johnson',
+  'angel cabrera', 'vijay singh', 'mike weir', 'jose maria olazabal',
+  'fred couples', 'dustin johnson', 'keegan bradley', 'adam scott',
+  'sepp straka', 'tom kim', 'eric cole', 'chris kirk',
+  'matt fitzpatrick', 'alex noren', 'daniel berger', 'billy horschel',
+  'ryan fox', 'patrick rodgers', 'brian campbell', 'max greyserman',
+  'matt mccarty', 'andrew putnam', 'taylor moore', 'harry hall',
+  'corey conners', 'michael thorbjornsen', 'tom hoge', 'joel dahmen',
+  'jhonattan vegas', 'daniel bennett', 'ethan fang', 'jackson herrington',
+  'mason howell', 'austin eckroat', 'chris gotterup', 'j.j. spaun'
+]);
 
 
 
@@ -1042,7 +1056,8 @@ function scoreEntry(entry) {
     // Apply cut line directly here — if score >= CUT_LINE, mark as cut regardless of API status
     const apiStatus = data ? data.status : 'pending';
     const overCutLine = CUT_LINE !== null && score !== null && score >= CUT_LINE;
-    const status = (apiStatus === 'cut' || overCutLine) ? 'cut' : apiStatus;
+    const inCutList = MISSED_CUT_PLAYERS.has(parseName(g));
+    const status = (apiStatus === 'cut' || overCutLine || inCutList) ? 'cut' : apiStatus;
     return {
       name: g,
       score,
@@ -1306,8 +1321,6 @@ async function fetchESPN() {
 
             espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
             return { name, score, pos, today: todayStr, thru, isCut };
-            // DEBUG — log linescore count for every player
-            console.log(name, '| rounds:', roundsPlayed, '| isCut:', isCut, '| score:', scoreStr);
           });
 
 
@@ -1347,6 +1360,14 @@ async function fetchESPN() {
     }
 
     if (!rows || !rows.length) throw new Error('No player data returned');
+
+    // Apply hardcoded cut list
+    rows = rows.map(r => ({
+      ...r,
+      isCut: r.isCut || MISSED_CUT_PLAYERS.has(parseName(r.name))
+    }));
+    // Sync back to espnScores
+    rows.forEach(r => { if (espnScores[r.name]) espnScores[r.name].status = r.isCut ? 'cut' : 'active'; });
 
     // Update espnScores cut status and assign positions
     const activeForPos = rows.filter(r => !r.isCut).sort((a,b) => (a.score||0) - (b.score||0));
