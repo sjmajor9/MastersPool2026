@@ -1581,32 +1581,24 @@ async function fetchWeather() {
 function updateHeroLeader() {
   const leaderEl = document.getElementById('hero-leader');
   const scoreEl  = document.getElementById('hero-leader-score');
-  if (!allEntries.length) {
+  const entriesEl = document.getElementById('hero-entries-alive');
+  const entriesSubEl = document.getElementById('hero-entries-sub');
+
+  // Use allScoredEntries — same data already calculated by renderPoolTable
+  if (!allScoredEntries.length || Object.keys(espnScores).length === 0) {
     leaderEl.textContent = '—';
-    scoreEl.textContent  = 'Loading…';
+    scoreEl.textContent = 'Loading…';
     return;
   }
 
-  // Score all entries and find the pool leader
-  const scored = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
-  scored.sort((a, b) => {
-    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
-    if (a.totalScore === null && b.totalScore === null) return a.entry.tiebreaker - b.entry.tiebreaker;
-    if (a.totalScore === null) return 1;
-    if (b.totalScore === null) return -1;
-    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
-    return a.entry.tiebreaker - b.entry.tiebreaker;
-  });
-
-  const leader = scored[0];
+  const leader = allScoredEntries[0];
   if (!leader) return;
 
   const scoreVal = leader.totalScore;
   const scoreStr = fmtScore(scoreVal);
   const cls = scoreVal !== null && scoreVal < 0 ? 'under' : scoreVal !== null && scoreVal > 0 ? 'over' : '';
 
-  // Check for ties
-  const tied = scored.filter(s => s.totalScore === scoreVal && s.madeCut === leader.madeCut);
+  const tied = allScoredEntries.filter(s => s.totalScore === scoreVal && s.madeCut === leader.madeCut);
   let displayName = leader.entry.name;
   if (tied.length > 1) displayName += ` +${tied.length - 1}`;
 
@@ -1614,15 +1606,9 @@ function updateHeroLeader() {
   leaderEl.className = `hero-info-value ${cls}`;
   scoreEl.textContent = scoreVal !== null ? scoreStr : 'Pending';
 
-  // Update entries alive count
-  const alive = scored.filter(s => s.madeCut).length;
-  const total = scored.length;
-  const entriesEl = document.getElementById('hero-entries-alive');
-  const entriesSubEl = document.getElementById('hero-entries-sub');
+  const alive = allScoredEntries.filter(s => s.madeCut).length;
   if (entriesEl) entriesEl.textContent = alive;
   if (entriesSubEl) entriesSubEl.textContent = 'still alive';
-
-
 }
 
 // ── Init ──────────────────────────────────────────────────────
