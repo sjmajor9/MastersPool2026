@@ -1194,20 +1194,27 @@ async function fetchESPN() {
           espnScores = {};
           rows = competitors.map(c => {
             const name = c.athlete?.displayName || 'Unknown';
-            const rawScoreStr = (c.score || 'E').toString().trim();
+            // c.score can be a string like "E", "+3", or an object with displayValue/value
+            const scoreObj = c.score;
+            const scoreRaw = typeof scoreObj === 'object'
+              ? (scoreObj?.displayValue || scoreObj?.value || 'E')
+              : (scoreObj || 'E');
+            const scoreStr = scoreRaw.toString().trim().toUpperCase();
 
-            // Cut detection — check score string, status type, and display value
-            const statusVal = (c.status?.type?.name || c.status?.displayValue || '').toLowerCase();
-            const scoreStrUpper = rawScoreStr.toUpperCase();
-            const isCut = scoreStrUpper === 'CUT' || scoreStrUpper === 'WD' || scoreStrUpper === 'DQ'
-              || c.status?.type?.id === '3'
-              || statusVal.includes('cut') || statusVal.includes('wd') || statusVal.includes('withdrew');
+            // Cut detection — check score displayValue, score object status, and any status fields
+            const scoreStatus = typeof scoreObj === 'object' ? (scoreObj?.status || scoreObj?.type || '') : '';
+            const statusVal = (c.status?.type?.name || c.status?.displayValue || scoreStatus || '').toLowerCase();
+            const isCut = scoreStr === 'CUT' || scoreStr === 'WD' || scoreStr === 'DQ' || scoreStr === 'W/D'
+              || statusVal.includes('cut') || statusVal.includes('wd') || statusVal.includes('withdrew')
+              || (typeof scoreObj === 'object' && (scoreObj?.cut === true || scoreObj?.isCut === true));
 
-            // Parse score — if it says CUT/WD use the numeric score if available, else null
-            const score = isCut ? null : parseESPNScore(rawScoreStr);
+            // Parse numeric score
+            const score = isCut ? null : parseESPNScore(scoreStr);
 
-            // Position
-            const pos = c.status?.position?.displayName || (isCut ? 'CUT' : '–');
+            // Position — check multiple locations
+            const pos = c.status?.position?.displayName
+              || (typeof scoreObj === 'object' ? scoreObj?.position : null)
+              || (isCut ? 'CUT' : '–');
 
             // Today's round score — last linescore entry
             const linescores = c.linescores || [];
@@ -1223,8 +1230,11 @@ async function fetchESPN() {
             return { name, score, pos, today: todayStr, thru, isCut };
           });
 
-          // Debug — log ALL raw competitor data so we can see cut fields
-          console.log('ESPN RAW COMPETITORS:', JSON.stringify(competitors.slice(0, 3), null, 2));
+          // Debug — log score field details for first 3 players
+          competitors.slice(0, 3).forEach((c, i) => {
+            console.log(`Player ${i} score field:`, typeof c.score, JSON.stringify(c.score));
+            console.log(`Player ${i} status field:`, JSON.stringify(c.status));
+          });
         }
       } catch(e) { console.log('ESPN parse error:', e); }
     }
