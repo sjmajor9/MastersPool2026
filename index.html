@@ -1183,13 +1183,16 @@ async function fetchESPN() {
     let rows = null;
 
     // ── ESPN API (primary) ───────────────────────────────────
-    const espnRes = await tryFetch('https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard');
+    const espnRes = await tryFetch('https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260409&tournamentId=401811941');
     if (espnRes) {
       try {
         const data = await espnRes.json();
         const events = data.events || [];
-        const event = events.find(e => e.name && e.name.toLowerCase().includes('master')) || events[0];
+        // Use first event — we're already requesting Masters specifically via tournamentId
+        const event = events[0];
+        if (!event) throw new Error('No Masters event returned');
         const competitors = event?.competitions?.[0]?.competitors || [];
+        console.log('Event name:', event?.name, '| Competitors:', competitors.length);
         if (competitors.length) {
           espnScores = {};
           rows = competitors.map(c => {
@@ -1230,11 +1233,7 @@ async function fetchESPN() {
             return { name, score, pos, today: todayStr, thru, isCut };
           });
 
-          // Debug — log score field details for first 3 players
-          competitors.slice(0, 3).forEach((c, i) => {
-            console.log(`Player ${i} score field:`, typeof c.score, JSON.stringify(c.score));
-            console.log(`Player ${i} status field:`, JSON.stringify(c.status));
-          });
+
         }
       } catch(e) { console.log('ESPN parse error:', e); }
     }
