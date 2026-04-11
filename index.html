@@ -993,7 +993,11 @@ async function fetchEntries() {
     const csv = await res.text();
     allEntries = parseCSV(csv);
     allEntries.forEach(e => e.golfers.forEach(g => poolGolfers.add(parseName(g))));
-    renderPoolTable();
+    // Only render if ESPN scores are already loaded — otherwise init() will trigger it
+    if (Object.keys(espnScores).length > 0) {
+      renderPoolTable();
+      updateHeroLeader();
+    }
   } catch(err) {
     document.getElementById('pool-loading').style.display = 'none';
     document.getElementById('pool-error').style.display = 'block';
@@ -1268,48 +1272,34 @@ async function fetchESPN() {
         const competitors = event?.competitions?.[0]?.competitors || [];
         console.log('Event name:', event?.name, '| Competitors:', competitors.length);
         if (competitors.length) {
-          // Log full raw data for first 3 competitors so we can see cut fields
-          console.log('=== ESPN RAW SAMPLE ===');
-          competitors.slice(0, 3).forEach((c,i) => console.log('Competitor', i, JSON.stringify(c, null, 2)));
-
           espnScores = {};
           rows = competitors.map(c => {
             const name = c.athlete?.displayName || 'Unknown';
             // c.score can be a string like "E", "+3", or an object with displayValue/value
-            const scoreObj = c.score;
-            const scoreRaw = typeof scoreObj === 'object'
-              ? (scoreObj?.displayValue || scoreObj?.value || 'E')
-              : (scoreObj || 'E');
-            const scoreStr = scoreRaw.toString().trim().toUpperCase();
+            // c.score is a plain string e.g. "-12", "+4", "E"
+            const scoreStr = (c.score || 'E').toString().trim().toUpperCase();
 
-            // Cut detection — apply our own cut line + catch ESPN's own cut flags
-            const scoreStatus = typeof scoreObj === 'object' ? (scoreObj?.status || scoreObj?.type || '') : '';
-            const statusVal = (c.status?.type?.name || c.status?.displayValue || scoreStatus || '').toLowerCase();
-            const espnSaysCut = scoreStr === 'CUT' || scoreStr === 'WD' || scoreStr === 'DQ' || scoreStr === 'W/D'
-              || statusVal.includes('cut') || statusVal.includes('wd') || statusVal.includes('withdrew')
-              || (typeof scoreObj === 'object' && (scoreObj?.cut === true || scoreObj?.isCut === true));
-            // Also apply our own cut line — anyone at CUT_LINE or worse is cut
-            const numericScore = parseESPNScore(scoreStr);
-            const overCutLine = CUT_LINE !== null && numericScore !== null && numericScore >= CUT_LINE;
-            const isCut = espnSaysCut || overCutLine;
+            // Cut detection — players with exactly 2 linescores missed the cut
+            // Active players in round 3 have 3 linescores; cut players have 2
+            const linescores = c.linescores || [];
+            const roundsPlayed = linescores.length;
+            const missedCutByRounds = roundsPlayed === 2;
+            const scoreStrCut = scoreStr === 'CUT' || scoreStr === 'WD' || scoreStr === 'DQ';
+            const isCut = missedCutByRounds || scoreStrCut;
 
             // Parse numeric score
-            const score = isCut ? null : parseESPNScore(scoreStr);
+            const score = isCut ? parseESPNScore(scoreStr) : parseESPNScore(scoreStr);
 
-            // Position — check multiple locations
-            const pos = c.status?.position?.displayName
-              || (typeof scoreObj === 'object' ? scoreObj?.position : null)
-              || (isCut ? 'CUT' : '–');
+            // Position — not in this API response, derive from order
+            const pos = isCut ? 'CUT' : '–';
 
             // Today's round score — last linescore entry
-            const linescores = c.linescores || [];
             const todayRaw = linescores.length ? linescores[linescores.length - 1]?.displayValue : null;
             const todayParsed = todayRaw ? parseESPNScore(todayRaw.toString().trim()) : null;
             const todayStr = todayParsed !== null ? fmtScore(todayParsed) : '–';
 
-            // Thru holes — F if cut/finished
-            const thruRaw = c.status?.thru ?? null;
-            const thru = isCut ? 'F' : (thruRaw !== null && String(thruRaw).trim() !== '') ? String(thruRaw) : (c.status?.displayValue || '–');
+            // Thru — not in this API response
+            const thru = isCut ? 'F' : '–';
 
             espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
             return { name, score, pos, today: todayStr, thru, isCut };
@@ -1353,14 +1343,20 @@ async function fetchESPN() {
 
     if (!rows || !rows.length) throw new Error('No player data returned');
 
-    // Apply our own cut line if set
-    rows = rows.map(r => {
-      const overCutLine = CUT_LINE !== null && r.score !== null && r.score >= CUT_LINE;
-      return { ...r, isCut: r.isCut || overCutLine };
+    // Update espnScores cut status and assign positions
+    const activeForPos = rows.filter(r => !r.isCut).sort((a,b) => (a.score||0) - (b.score||0));
+    let pNum = 1;
+    activeForPos.forEach((r, i) => {
+      const next = activeForPos[i+1];
+      const isTie = next && next.score === r.score;
+      r.pos = isTie ? 'T' + pNum : String(pNum);
+      if (!isTie) pNum = i + 2;
     });
-    // Update espnScores to match
     rows.forEach(r => {
-      if (espnScores[r.name]) espnScores[r.name].status = r.isCut ? 'cut' : 'active';
+      if (espnScores[r.name]) {
+        espnScores[r.name].status = r.isCut ? 'cut' : 'active';
+        espnScores[r.name].pos = r.pos || (r.isCut ? 'CUT' : '–');
+      }
     });
 
     rows.sort((a,b) => {
