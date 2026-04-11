@@ -965,13 +965,18 @@ function parseCSVLine(line) {
 function scoreEntry(entry) {
   const scored = entry.golfers.map(g => {
     const data = lookupGolfer(g);
+    const score = data ? data.score : null;
+    // Apply cut line directly here — if score >= CUT_LINE, mark as cut regardless of API status
+    const apiStatus = data ? data.status : 'pending';
+    const overCutLine = score !== null && score >= CUT_LINE;
+    const status = (apiStatus === 'cut' || overCutLine) ? 'cut' : apiStatus;
     return {
       name: g,
-      score: data ? data.score : null,
+      score,
       pos: data ? data.pos : null,
       today: data ? data.today : null,
       thru: data ? (data.thru || null) : null,
-      status: data ? data.status : 'pending'
+      status
     };
   });
 
@@ -1274,6 +1279,16 @@ async function fetchESPN() {
     }
 
     if (!rows || !rows.length) throw new Error('No player data returned');
+
+    // Apply our own cut line as final override — anyone at CUT_LINE or worse is cut
+    rows = rows.map(r => {
+      const overCutLine = r.score !== null && r.score >= CUT_LINE;
+      return { ...r, isCut: r.isCut || overCutLine };
+    });
+    // Update espnScores to match
+    rows.forEach(r => {
+      if (espnScores[r.name]) espnScores[r.name].status = r.isCut ? 'cut' : 'active';
+    });
 
     rows.sort((a,b) => {
       if (a.isCut !== b.isCut) return a.isCut ? 1 : -1;
