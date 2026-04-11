@@ -900,24 +900,10 @@ const COL = {
 
 // CUT LINE — set to null now that round 2 is complete
 // ESPN should be returning correct cut status for round 3+
-// CUT LINE — null since round 2 is complete (using hardcoded list instead)
+// CUT_LINE — reading cut status directly from ESPN API
 const CUT_LINE = null;
+const MISSED_CUT_PLAYERS = new Set(); // not used — relying on ESPN API
 
-// Hardcoded list of players who missed the 2026 Masters cut (+4 cutline)
-const MISSED_CUT_PLAYERS = new Set([
-  'bryson dechambeau', 'akshay bhatia', 'jj spaun', 'j.j. spaun',
-  'robert macintyre', 'bubba watson', 'danny willett', 'zach johnson',
-  'angel cabrera', 'vijay singh', 'mike weir', 'jose maria olazabal',
-  'fred couples', 'cameron smith', 'nicolai hojgaard',
-  'ethan fang', 'jackson herrington', 'mason howell',
-  'matt fitzpatrick', 'min woo lee', 'keegan bradley',
-  'adam scott', 'rickie fowler', 'sepp straka', 'tom kim',
-  'eric cole', 'chris kirk', 'alex noren', 'dustin johnson',
-  'taylor moore', 'andrew putnam', 'brian campbell', 'max greyserman',
-  'matt mccarty', 'patrick rodgers', 'ryan fox', 'billy horschel',
-  'jhonattan vegas', 'tom hoge', 'joel dahmen', 'corey conners',
-  'harry hall', 'daniel berger', 'michael thorbjornsen', 'daniel bennett'
-]);
 
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -1052,8 +1038,7 @@ function scoreEntry(entry) {
     // Apply cut line directly here — if score >= CUT_LINE, mark as cut regardless of API status
     const apiStatus = data ? data.status : 'pending';
     const overCutLine = CUT_LINE !== null && score !== null && score >= CUT_LINE;
-    const inMissedCutList = MISSED_CUT_PLAYERS.has(parseName(g));
-    const status = (apiStatus === 'cut' || overCutLine || inMissedCutList) ? 'cut' : apiStatus;
+    const status = (apiStatus === 'cut' || overCutLine) ? 'cut' : apiStatus;
     return {
       name: g,
       score,
@@ -1283,6 +1268,10 @@ async function fetchESPN() {
         const competitors = event?.competitions?.[0]?.competitors || [];
         console.log('Event name:', event?.name, '| Competitors:', competitors.length);
         if (competitors.length) {
+          // Log full raw data for first 3 competitors so we can see cut fields
+          console.log('=== ESPN RAW SAMPLE ===');
+          competitors.slice(0, 3).forEach((c,i) => console.log('Competitor', i, JSON.stringify(c, null, 2)));
+
           espnScores = {};
           rows = competitors.map(c => {
             const name = c.athlete?.displayName || 'Unknown';
@@ -1367,8 +1356,7 @@ async function fetchESPN() {
     // Apply our own cut line if set
     rows = rows.map(r => {
       const overCutLine = CUT_LINE !== null && r.score !== null && r.score >= CUT_LINE;
-      const inMissedCutList = MISSED_CUT_PLAYERS.has(parseName(r.name));
-      return { ...r, isCut: r.isCut || overCutLine || inMissedCutList };
+      return { ...r, isCut: r.isCut || overCutLine };
     });
     // Update espnScores to match
     rows.forEach(r => {
