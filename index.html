@@ -898,9 +898,27 @@ const COL = {
   tiebreaker: 7    // Column H
 };
 
-// CUT LINE — players at this score or worse are considered cut
-// Masters 2026 cut was +5
-const CUT_LINE = 5; // anyone +5 or worse is cut
+// CUT LINE — set to null now that round 2 is complete
+// ESPN should be returning correct cut status for round 3+
+// CUT LINE — null since round 2 is complete (using hardcoded list instead)
+const CUT_LINE = null;
+
+// Hardcoded list of players who missed the 2026 Masters cut (+4 cutline)
+const MISSED_CUT_PLAYERS = new Set([
+  'bryson dechambeau', 'akshay bhatia', 'jj spaun', 'j.j. spaun',
+  'robert macintyre', 'bubba watson', 'danny willett', 'zach johnson',
+  'angel cabrera', 'vijay singh', 'mike weir', 'jose maria olazabal',
+  'fred couples', 'cameron smith', 'nicolai hojgaard',
+  'ethan fang', 'jackson herrington', 'mason howell',
+  'matt fitzpatrick', 'min woo lee', 'keegan bradley',
+  'adam scott', 'rickie fowler', 'sepp straka', 'tom kim',
+  'eric cole', 'chris kirk', 'alex noren', 'dustin johnson',
+  'taylor moore', 'andrew putnam', 'brian campbell', 'max greyserman',
+  'matt mccarty', 'patrick rodgers', 'ryan fox', 'billy horschel',
+  'jhonattan vegas', 'tom hoge', 'joel dahmen', 'corey conners',
+  'harry hall', 'daniel berger', 'michael thorbjornsen', 'daniel bennett'
+]);
+
 
 /* ═══════════════════════════════════════════════════════════ */
 
@@ -1033,8 +1051,9 @@ function scoreEntry(entry) {
     const score = data ? data.score : null;
     // Apply cut line directly here — if score >= CUT_LINE, mark as cut regardless of API status
     const apiStatus = data ? data.status : 'pending';
-    const overCutLine = score !== null && score >= CUT_LINE;
-    const status = (apiStatus === 'cut' || overCutLine) ? 'cut' : apiStatus;
+    const overCutLine = CUT_LINE !== null && score !== null && score >= CUT_LINE;
+    const inMissedCutList = MISSED_CUT_PLAYERS.has(parseName(g));
+    const status = (apiStatus === 'cut' || overCutLine || inMissedCutList) ? 'cut' : apiStatus;
     return {
       name: g,
       score,
@@ -1282,7 +1301,7 @@ async function fetchESPN() {
               || (typeof scoreObj === 'object' && (scoreObj?.cut === true || scoreObj?.isCut === true));
             // Also apply our own cut line — anyone at CUT_LINE or worse is cut
             const numericScore = parseESPNScore(scoreStr);
-            const overCutLine = numericScore !== null && numericScore >= CUT_LINE;
+            const overCutLine = CUT_LINE !== null && numericScore !== null && numericScore >= CUT_LINE;
             const isCut = espnSaysCut || overCutLine;
 
             // Parse numeric score
@@ -1333,7 +1352,7 @@ async function fetchESPN() {
               const rawThru = p.thru ?? p.holes_played ?? p.holesPlayed ?? null;
               const thru = rawThru ? String(rawThru).trim() : '–';
               const mastersApiCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
-              const overCutLine = safeScore !== null && safeScore >= CUT_LINE;
+              const overCutLine = CUT_LINE !== null && safeScore !== null && safeScore >= CUT_LINE;
               const isCut = mastersApiCut || overCutLine;
               espnScores[name] = { score: safeScore, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
               return { name, score: safeScore, pos, today: todayStr, thru, isCut };
@@ -1345,10 +1364,11 @@ async function fetchESPN() {
 
     if (!rows || !rows.length) throw new Error('No player data returned');
 
-    // Apply our own cut line as final override — anyone at CUT_LINE or worse is cut
+    // Apply our own cut line if set
     rows = rows.map(r => {
-      const overCutLine = r.score !== null && r.score >= CUT_LINE;
-      return { ...r, isCut: r.isCut || overCutLine };
+      const overCutLine = CUT_LINE !== null && r.score !== null && r.score >= CUT_LINE;
+      const inMissedCutList = MISSED_CUT_PLAYERS.has(parseName(r.name));
+      return { ...r, isCut: r.isCut || overCutLine || inMissedCutList };
     });
     // Update espnScores to match
     rows.forEach(r => {

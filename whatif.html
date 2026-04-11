@@ -421,8 +421,23 @@ const COL = {
   tiebreaker: 7
 };
 
-// Masters 2026 cut line — +5 or worse is cut
-const CUT_LINE = 5;
+// Cut line disabled — using hardcoded missed cut list instead
+const CUT_LINE = null;
+
+const MISSED_CUT_PLAYERS = new Set([
+  'bryson dechambeau', 'akshay bhatia', 'jj spaun', 'j.j. spaun',
+  'robert macintyre', 'bubba watson', 'danny willett', 'zach johnson',
+  'angel cabrera', 'vijay singh', 'mike weir', 'jose maria olazabal',
+  'fred couples', 'cameron smith', 'nicolai hojgaard',
+  'ethan fang', 'jackson herrington', 'mason howell',
+  'matt fitzpatrick', 'min woo lee', 'keegan bradley',
+  'adam scott', 'rickie fowler', 'sepp straka', 'tom kim',
+  'eric cole', 'chris kirk', 'alex noren', 'dustin johnson',
+  'taylor moore', 'andrew putnam', 'brian campbell', 'max greyserman',
+  'matt mccarty', 'patrick rodgers', 'ryan fox', 'billy horschel',
+  'jhonattan vegas', 'tom hoge', 'joel dahmen', 'corey conners',
+  'harry hall', 'daniel berger', 'michael thorbjornsen', 'daniel bennett'
+]);
 
 let allEntries = [];
 let espnScores = {};
@@ -552,7 +567,7 @@ async function fetchESPN() {
       const name = c.athlete?.displayName || 'Unknown';
       const score = parseESPNScore((c.score || 'E').toString());
       const espnCut = c.status?.type?.id === '3' || (c.status?.displayValue||'').toLowerCase().includes('cut');
-      const overCutLine = score !== null && score >= CUT_LINE;
+      const overCutLine = CUT_LINE !== null && score !== null && score >= CUT_LINE;
       const isCut = espnCut || overCutLine;
       espnScores[name] = {
         score,
@@ -574,8 +589,9 @@ function scoreEntry(entry) {
     const score = data?.score ?? null;
     const apiStatus = data?.status || 'pending';
     // Apply cut line — anyone at CUT_LINE or worse is cut
-    const overCutLine = score !== null && score >= CUT_LINE;
-    const status = (apiStatus === 'cut' || overCutLine) ? 'cut' : apiStatus;
+    const overCutLine = CUT_LINE !== null && score !== null && score >= CUT_LINE;
+    const inMissedCutList = MISSED_CUT_PLAYERS.has(parseName(g));
+    const status = (apiStatus === 'cut' || overCutLine || inMissedCutList) ? 'cut' : apiStatus;
     return { name: g, score, status };
   });
   const active = scored.filter(g => g.status !== 'cut');
