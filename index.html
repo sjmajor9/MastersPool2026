@@ -1303,6 +1303,8 @@ async function fetchESPN() {
 
             espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
             return { name, score, pos, today: todayStr, thru, isCut };
+            // DEBUG — log linescore count for every player
+            console.log(name, '| rounds:', roundsPlayed, '| isCut:', isCut, '| score:', scoreStr);
           });
 
 
