@@ -1261,10 +1261,13 @@ async function fetchESPN() {
     let rows = null;
 
     // ── ESPN API (primary) ───────────────────────────────────
+    console.log("=== FETCHING ESPN ===");
     const espnRes = await tryFetch('https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260409&tournamentId=401811941');
+    console.log("ESPN res:", espnRes ? "got response" : "null/failed");
     if (espnRes) {
       try {
         const data = await espnRes.json();
+        console.log("ESPN events count:", data?.events?.length);
         const events = data.events || [];
         // Use first event — we're already requesting Masters specifically via tournamentId
         const event = events[0];
