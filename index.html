@@ -1219,22 +1219,12 @@ async function fetchESPN() {
             const thruRaw = c.status?.thru ?? null;
             const thru = isCut ? 'F' : (thruRaw !== null && String(thruRaw).trim() !== '') ? String(thruRaw) : (c.status?.displayValue || '–');
 
-            // Debug — log first 5 players to console so we can see raw data
-            if (rows === null || (espnScores && Object.keys(espnScores).length < 5)) {
-              console.log('ESPN player raw:', {
-                name,
-                rawScore: c.score,
-                statusTypeId: c.status?.type?.id,
-                statusTypeName: c.status?.type?.name,
-                statusDisplayValue: c.status?.displayValue,
-                isCut,
-                linescores: c.linescores?.map(l => l.displayValue)
-              });
-            }
-
             espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
             return { name, score, pos, today: todayStr, thru, isCut };
           });
+
+          // Debug — log ALL raw competitor data so we can see cut fields
+          console.log('ESPN RAW COMPETITORS:', JSON.stringify(competitors.slice(0, 3), null, 2));
         }
       } catch(e) { console.log('ESPN parse error:', e); }
     }
