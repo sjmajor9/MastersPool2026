@@ -1046,9 +1046,9 @@ function filterPool(query) {
   const noResults = document.getElementById('no-results');
   const q = (query || '').trim().toLowerCase();
 
-  // If searching, show all matching entries; otherwise top 50
+  // If searching, show all matching entries (capped at 350); otherwise top 50
   const pool = q
-    ? allScoredEntries.filter(s => s.entry.name.toLowerCase().includes(q))
+    ? allScoredEntries.filter(s => s.entry.name.toLowerCase().includes(q)).slice(0, 350)
     : allScoredEntries.slice(0, 50);
 
   if (pool.length === 0) {
@@ -1068,9 +1068,16 @@ function filterPool(query) {
 
   tbody.innerHTML = pool.map(s => {
     const { entry, totalScore, madeCut, countable } = s;
-    const cutPill = madeCut
-      ? `<span class="cut-pill made">Made Cut</span>`
-      : (s.cutMissed.length >= 3 ? `<span class="cut-pill missed">MC</span>` : `<span class="cut-pill pending">Pending</span>`);
+    let cutPill;
+    if (madeCut) {
+      cutPill = `<span class="cut-pill made">Made Cut</span>`;
+    } else if (s.cutMissed.length >= 3) {
+      cutPill = `<span class="cut-pill missed">MC</span>`;
+    } else if (s.cutMissed.length > 0) {
+      cutPill = `<span class="cut-pill pending">${s.cutMissed.length} Cut</span>`;
+    } else {
+      cutPill = `<span class="cut-pill pending">Pending</span>`;
+    }
     const topNames = countable.map(g => g.name).join(', ');
     return `<tr onclick="showEntry('${entry.name.replace(/'/g,"\\'")}')">
       <td class="rank-cell">${s.rank}</td>
@@ -1174,77 +1181,71 @@ async function fetchESPN() {
   try {
     let rows = null;
 
-    // ── Try masters.com JSON feed first ──────────────────────
-    const mastersRes = await tryFetch('https://www.masters.com/api/v1/leaderboard');
-    if (mastersRes) {
+    // ── ESPN API (primary) ───────────────────────────────────
+    const espnRes = await tryFetch('https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard');
+    if (espnRes) {
       try {
-        const mData = await mastersRes.json();
-        const players = mData?.data?.player || mData?.leaderboard?.players || mData?.players || [];
-        if (players.length) {
+        const data = await espnRes.json();
+        const events = data.events || [];
+        const event = events.find(e => e.name && e.name.toLowerCase().includes('master')) || events[0];
+        const competitors = event?.competitions?.[0]?.competitors || [];
+        if (competitors.length) {
           espnScores = {};
-          rows = players.map(p => {
-            const name = `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
+          rows = competitors.map(c => {
+            const name = c.athlete?.displayName || 'Unknown';
+            const score = parseESPNScore((c.score || 'E').toString().trim());
 
-            // masters.com uses topar for score-to-par — never use p.total (that's gross strokes)
-            const rawScore = p.topar ?? p.to_par ?? p.overallPar ?? p.score_to_par ?? null;
-            const score = rawScore !== null ? parseESPNScore(String(rawScore)) : 0;
+            // Position
+            const pos = c.status?.position?.displayName || '–';
 
-            // Sanity check — gross stroke totals are 60-80+, to-par scores are -20 to +20
-            const safeScore = (score !== null && Math.abs(score) <= 30) ? score : 0;
+            // Today's round score — last linescore entry
+            const linescores = c.linescores || [];
+            const todayRaw = linescores.length ? linescores[linescores.length - 1]?.displayValue : null;
+            const todayParsed = todayRaw ? parseESPNScore(todayRaw.toString().trim()) : null;
+            const todayStr = todayParsed !== null ? fmtScore(todayParsed) : '–';
 
-            const pos = String(p.pos || p.position || '–');
+            // Thru holes
+            const thruRaw = c.status?.thru ?? null;
+            const thru = (thruRaw !== null && String(thruRaw).trim() !== '') ? String(thruRaw) : (c.status?.displayValue || '–');
 
-            // Today's round score — keep as raw string first, parse if numeric
-            const rawToday = p.today ?? p.round_score ?? p.round_total ?? p.currentRound ?? null;
-            let todayDisplay = '–';
-            if (rawToday !== null && rawToday !== undefined) {
-              const parsedToday = parseESPNScore(String(rawToday));
-              if (parsedToday !== null && Math.abs(parsedToday) <= 20) {
-                todayDisplay = fmtScore(parsedToday);
-              } else if (String(rawToday).trim() !== '') {
-                todayDisplay = String(rawToday).trim();
-              }
-            }
+            // Cut detection — type id 3 = cut, or status says cut/wd
+            const statusVal = (c.status?.type?.name || c.status?.displayValue || '').toLowerCase();
+            const isCut = c.status?.type?.id === '3' || statusVal.includes('cut') || statusVal.includes('wd') || statusVal.includes('withdrew');
 
-            // Thru holes — try multiple field names
-            const rawThru = p.thru ?? p.holes_played ?? p.holesPlayed ?? p.holesDone ?? p.hole ?? null;
-            const thru = (rawThru !== null && rawThru !== undefined && String(rawThru).trim() !== '' && String(rawThru) !== '0')
-              ? String(rawThru).trim()
-              : '–';
-
-            const isCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
-
-            espnScores[name] = { score: safeScore, pos, today: todayDisplay, thru, status: isCut ? 'cut' : 'active' };
-            return { name, score: safeScore, pos, today: todayDisplay, thru, isCut };
+            espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
+            return { name, score, pos, today: todayStr, thru, isCut };
           });
         }
-      } catch(e) { console.log('masters.com parse error:', e); }
+      } catch(e) { console.log('ESPN parse error:', e); }
     }
 
-    // ── Fallback to ESPN API ──────────────────────────────────
+    // ── Fallback to masters.com ───────────────────────────────
     if (!rows) {
-      const espnRes = await tryFetch('https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard');
-      if (!espnRes) throw new Error('All sources failed — check back shortly');
-      const data = await espnRes.json();
-      const events = data.events || [];
-      if (!events.length) throw new Error('No events found');
-      const event = events.find(e => e.name && e.name.toLowerCase().includes('master')) || events[0];
-      const competitors = event.competitions?.[0]?.competitors || [];
-      if (!competitors.length) throw new Error('No competitor data');
-
-      espnScores = {};
-      rows = competitors.map(c => {
-        const name = c.athlete?.displayName || 'Unknown';
-        const score = parseESPNScore((c.score || 'E').toString().trim());
-        const pos = c.status?.position?.displayName || c.status?.displayValue || '–';
-        const today = parseESPNScore((c.linescores?.[c.linescores.length - 1]?.displayValue || 'E').toString().trim());
-        const rawThru = c.status?.thru ?? c.status?.period ?? null;
-        const thru = (rawThru !== null && String(rawThru).trim() !== '') ? String(rawThru) : (c.status?.displayValue || '–');
-        const isCut = c.status?.type?.id === '3' || (c.status?.displayValue || '').toLowerCase().includes('cut');
-        const todayStr = fmtScore(today);
-        espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
-        return { name, score, pos, today: todayStr, thru, isCut };
-      });
+      const mastersRes = await tryFetch('https://www.masters.com/api/v1/leaderboard');
+      if (mastersRes) {
+        try {
+          const mData = await mastersRes.json();
+          const players = mData?.data?.player || mData?.leaderboard?.players || mData?.players || [];
+          if (players.length) {
+            espnScores = {};
+            rows = players.map(p => {
+              const name = `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
+              const rawScore = p.topar ?? p.to_par ?? p.overallPar ?? null;
+              const score = rawScore !== null ? parseESPNScore(String(rawScore)) : 0;
+              const safeScore = (score !== null && Math.abs(score) <= 30) ? score : 0;
+              const pos = String(p.pos || p.position || '–');
+              const rawToday = p.today ?? p.round_score ?? null;
+              const todayParsed = rawToday !== null ? parseESPNScore(String(rawToday)) : null;
+              const todayStr = todayParsed !== null ? fmtScore(todayParsed) : '–';
+              const rawThru = p.thru ?? p.holes_played ?? p.holesPlayed ?? null;
+              const thru = rawThru ? String(rawThru).trim() : '–';
+              const isCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
+              espnScores[name] = { score: safeScore, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
+              return { name, score: safeScore, pos, today: todayStr, thru, isCut };
+            });
+          }
+        } catch(e) { console.log('masters.com parse error:', e); }
+      }
     }
 
     if (!rows || !rows.length) throw new Error('No player data returned');
@@ -1257,14 +1258,29 @@ async function fetchESPN() {
     });
 
     const tbody = document.getElementById('espn-tbody');
+    // Assign positions to sorted rows
+    let lbPos = 1;
+    rows.forEach((r, i) => {
+      r.displayPos = r.isCut ? 'CUT' : lbPos;
+      if (!r.isCut) {
+        if (i < rows.length - 1 && !rows[i+1].isCut && rows[i+1].score === r.score) {
+          // tie — don't increment yet
+        } else {
+          lbPos = i + 2;
+        }
+      }
+    });
+
     tbody.innerHTML = rows.map(r => {
       const inPool = poolGolfers.has(parseName(r.name));
-      return `<tr class="${inPool ? 'golfer-in-pool' : ''}">
-        <td class="espn-pos">${r.pos}</td>
+      const rowStyle = r.isCut ? 'opacity:0.5;' : '';
+      const posDisplay = r.isCut ? '<span class="cut-pill missed" style="font-size:10px">CUT</span>' : r.displayPos;
+      return `<tr class="${inPool ? 'golfer-in-pool' : ''}" style="${rowStyle}">
+        <td class="espn-pos">${posDisplay}</td>
         <td>${r.name}${inPool ? '<span class="pool-dot"></span>' : ''}</td>
         <td class="espn-score ${scoreClass(r.score)}">${fmtScore(r.score)}</td>
-        <td style="font-size:13px;color:rgba(245,240,232,0.6)">${r.today}</td>
-        <td style="font-size:13px;color:rgba(245,240,232,0.6)">${r.thru}</td>
+        <td style="font-size:13px;color:rgba(245,240,232,0.6)">${r.today || '–'}</td>
+        <td style="font-size:13px;color:rgba(245,240,232,0.6)">${r.thru || '–'}</td>
         <td class="center">${r.isCut ? '<span class="cut-pill missed">Cut</span>' : '<span class="cut-pill made">Active</span>'}</td>
       </tr>`;
     }).join('');
