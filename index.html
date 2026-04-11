@@ -695,6 +695,11 @@
         <div class="hero-info-sub" id="hero-leader-score">Loading…</div>
       </div>
       <div class="hero-info-block">
+        <div class="hero-info-label">Entries</div>
+        <div class="hero-info-value" id="hero-entries-alive">—</div>
+        <div class="hero-info-sub" id="hero-entries-sub">of pool</div>
+      </div>
+      <div class="hero-info-block">
         <div class="hero-info-label">Weather · Augusta</div>
         <div class="hero-info-value" id="hero-weather-temp">—</div>
         <div class="hero-info-sub" id="hero-weather-cond">Loading…</div>
@@ -1489,6 +1494,14 @@ function updateHeroLeader() {
   leaderEl.textContent = displayName;
   leaderEl.className = `hero-info-value ${cls}`;
   scoreEl.textContent = scoreVal !== null ? scoreStr : 'Pending';
+
+  // Update entries alive count
+  const alive = scored.filter(s => s.madeCut).length;
+  const total = scored.length;
+  const entriesEl = document.getElementById('hero-entries-alive');
+  const entriesSubEl = document.getElementById('hero-entries-sub');
+  if (entriesEl) entriesEl.textContent = alive;
+  if (entriesSubEl) entriesSubEl.textContent = `of ${total} entries`;
 
 
 }
