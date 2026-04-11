@@ -469,15 +469,19 @@ function lookupGolfer(name) {
     return null;
   }
 
-  // Check if this golfer is the sim override
+  // Check if this golfer is the sim override — match by full name or last name
   const isOverride = simOverride && (
     key === simOverride.name ||
+    key.includes(simOverride.name) ||
+    simOverride.name.includes(key) ||
     key.split(' ').pop() === simOverride.name.split(' ').pop()
   );
 
   if (isOverride) {
-    const found = findInScores(simOverride.name);
+    // Get their REAL data first so we keep their cut status etc
+    const found = findInScores(simOverride.name) || findInScores(key);
     const base = found ? found[1] : { pos: '–', today: '–', thru: '–', status: 'active' };
+    // Only override the score — keep everything else (status, pos, thru) as real
     return { ...base, score: simOverride.score };
   }
 
@@ -520,7 +524,7 @@ async function fetchEntries() {
 
 /* ── ESPN ──────────────────────────────────── */
 async function fetchESPN() {
-  const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard';
+  const ESPN_URL = 'https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260409&tournamentId=401811941';
   const PROXIES = [
     'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
@@ -528,11 +532,15 @@ async function fetchESPN() {
   ];
   try {
     let res = null;
-    for (const proxy of PROXIES) {
-      try {
-        const attempt = await fetch(proxy + encodeURIComponent(ESPN_URL));
-        if (attempt.ok) { res = attempt; break; }
-      } catch(e) {}
+    // Try direct first
+    try { const r = await fetch(ESPN_URL); if (r.ok) res = r; } catch(e) {}
+    if (!res) {
+      for (const proxy of PROXIES) {
+        try {
+          const attempt = await fetch(proxy + encodeURIComponent(ESPN_URL));
+          if (attempt.ok) { res = attempt; break; }
+        } catch(e) {}
+      }
     }
     if (!res) throw new Error('All proxies failed');
     const data = await res.json();
@@ -563,11 +571,18 @@ async function fetchESPN() {
 function scoreEntry(entry) {
   const scored = entry.golfers.map(g => {
     const data = lookupGolfer(g);
-    return { name: g, score: data?.score ?? null, status: data?.status || 'pending' };
+    const score = data?.score ?? null;
+    const apiStatus = data?.status || 'pending';
+    // Apply cut line — anyone at CUT_LINE or worse is cut
+    const overCutLine = score !== null && score >= CUT_LINE;
+    const status = (apiStatus === 'cut' || overCutLine) ? 'cut' : apiStatus;
+    return { name: g, score, status };
   });
   const active = scored.filter(g => g.status !== 'cut');
   const cutMissed = scored.filter(g => g.status === 'cut');
-  const countable = active.filter(g => g.score !== null).sort((a,b) => a.score - b.score).slice(0,4);
+  const countable = active
+    .map(g => ({ ...g, score: g.score !== null ? g.score : 0 }))
+    .sort((a,b) => a.score - b.score).slice(0,4);
   const totalScore = countable.length >= 4 ? countable.reduce((s,g) => s + g.score, 0) : null;
   const madeCut = active.length >= 4;
   return { totalScore, madeCut, cutMissed, countable };
