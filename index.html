@@ -316,6 +316,47 @@
       color: var(--gold);
     }
 
+    /* ─── PRIZE + LEADERBOARD LAYOUT ─── */
+    .leaderboard-layout {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .leaderboard-main { flex: 1; min-width: 0; }
+    .prize-sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .prize-sidebar-header {
+      background: rgba(201,168,76,0.12);
+      border-bottom: 1px solid rgba(201,168,76,0.3);
+      padding: 12px 16px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
+      text-align: center;
+    }
+    .prize-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+    }
+    .prize-row:last-child { border-bottom: none; }
+    .prize-pos { color: rgba(245,240,232,0.55); }
+    .prize-amt { color: var(--gold-light); font-weight: 600; }
+    @media (max-width: 700px) {
+      .leaderboard-layout { flex-direction: column; }
+      .prize-sidebar { width: 100%; }
+    }
+
     /* ─── SEARCH BOX ─── */
     .search-wrap {
       position: relative;
@@ -738,31 +779,48 @@
         <div class="section-line"></div>
       </div>
 
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input class="search-input" id="search-input" type="text" placeholder="Search your name…" oninput="filterPool(this.value)" />
-      </div>
-      <div class="search-count" id="search-count"></div>
+      <div class="leaderboard-layout">
+        <!-- Main leaderboard -->
+        <div class="leaderboard-main">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" id="search-input" type="text" placeholder="Search your name…" oninput="filterPool(this.value)" />
+          </div>
+          <div class="search-count" id="search-count"></div>
 
-      <div class="pool-table-wrap">
-        <div id="pool-loading" class="loading-state">
-          <div class="loading-spinner"></div>
-          <div>Loading entries…</div>
+          <div class="pool-table-wrap">
+            <div id="pool-loading" class="loading-state">
+              <div class="loading-spinner"></div>
+              <div>Loading entries…</div>
+            </div>
+            <div id="pool-error" class="error-msg" style="display:none"></div>
+            <table class="pool-table" id="pool-table" style="display:none">
+              <thead>
+                <tr>
+                  <th>Pos</th>
+                  <th>Entrant</th>
+                  <th class="center">Score</th>
+                  <th class="center">Cut</th>
+                  <th class="center">Tiebreaker</th>
+                </tr>
+              </thead>
+              <tbody id="pool-tbody"></tbody>
+            </table>
+            <div class="no-results" id="no-results">No entries found matching your search.</div>
+          </div>
         </div>
-        <div id="pool-error" class="error-msg" style="display:none"></div>
-        <table class="pool-table" id="pool-table" style="display:none">
-          <thead>
-            <tr>
-              <th>Pos</th>
-              <th>Entrant</th>
-              <th class="center">Score</th>
-              <th class="center">Cut</th>
-              <th class="center">Tiebreaker</th>
-            </tr>
-          </thead>
-          <tbody id="pool-tbody"></tbody>
-        </table>
-        <div class="no-results" id="no-results">No entries found matching your search.</div>
+
+        <!-- Prize sidebar -->
+        <div class="prize-sidebar">
+          <div class="prize-sidebar-header">💰 Prizes</div>
+          <div class="prize-row"><span class="prize-pos">1st</span><span class="prize-amt">$3,440</span></div>
+          <div class="prize-row"><span class="prize-pos">2nd</span><span class="prize-amt">$1,400</span></div>
+          <div class="prize-row"><span class="prize-pos">3rd</span><span class="prize-amt">$500</span></div>
+          <div class="prize-row"><span class="prize-pos">4th</span><span class="prize-amt">$300</span></div>
+          <div class="prize-row"><span class="prize-pos">5th</span><span class="prize-amt">$100</span></div>
+          <div class="prize-row"><span class="prize-pos">6th–10th</span><span class="prize-amt">$60</span></div>
+          <div class="prize-row"><span class="prize-pos">11th–25th</span><span class="prize-amt">$40</span></div>
+        </div>
       </div>
 
       <!-- ESPN Leaderboard -->
