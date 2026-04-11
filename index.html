@@ -1086,7 +1086,7 @@ function filterPool(query) {
     }
     const topNames = countable.map(g => g.name).join(', ');
     return `<tr onclick="showEntry('${entry.name.replace(/'/g,"\\'")}')">
-      <td class="rank-cell">${s.rank}</td>
+      <td class="rank-cell">${s.cutMissed.length >= 3 && !madeCut ? '<span class="cut-pill missed" style="font-size:11px;padding:2px 8px">MC</span>' : s.rank}</td>
       <td>
         <div class="entry-name">${entry.name}</div>
         <div class="golfers-mini">${topNames || entry.golfers.slice(0,4).join(', ')}</div>
@@ -1298,18 +1298,19 @@ async function fetchESPN() {
     });
 
     const tbody = document.getElementById('espn-tbody');
-    // Assign positions to sorted rows
+    // Assign positions to sorted rows — only count active players
+    const activeRows = rows.filter(r => !r.isCut);
     let lbPos = 1;
-    rows.forEach((r, i) => {
-      r.displayPos = r.isCut ? 'CUT' : lbPos;
-      if (!r.isCut) {
-        if (i < rows.length - 1 && !rows[i+1].isCut && rows[i+1].score === r.score) {
-          // tie — don't increment yet
-        } else {
-          lbPos = i + 2;
-        }
+    activeRows.forEach((r, i) => {
+      r.displayPos = lbPos;
+      const next = activeRows[i + 1];
+      if (next && next.score === r.score) {
+        // tie — don't increment
+      } else {
+        lbPos = i + 2;
       }
     });
+    rows.filter(r => r.isCut).forEach(r => r.displayPos = 'CUT');
 
     tbody.innerHTML = rows.map(r => {
       const inPool = poolGolfers.has(parseName(r.name));
