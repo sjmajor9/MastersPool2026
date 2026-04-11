@@ -979,9 +979,9 @@ function scoreEntry(entry) {
   const active = scored.filter(g => g.status !== 'cut');
   const cutMissed = scored.filter(g => g.status === 'cut');
 
-  // Best 4 of those who made cut (or pending)
+  // Best 4 of those who made cut (or pending) — treat null score on active as 0 (not yet started)
   const countable = active
-    .filter(g => g.score !== null)
+    .map(g => ({ ...g, score: g.score !== null ? g.score : 0 }))
     .sort((a,b) => a.score - b.score)
     .slice(0, 4);
 
@@ -989,6 +989,7 @@ function scoreEntry(entry) {
     ? countable.reduce((s, g) => s + g.score, 0)
     : null;
 
+  // MC if fewer than 4 golfers are still active (status !== 'cut')
   const madeCut = active.length >= 4;
 
   return { scored, countable, totalScore, madeCut, cutMissed };
@@ -1193,10 +1194,20 @@ async function fetchESPN() {
           espnScores = {};
           rows = competitors.map(c => {
             const name = c.athlete?.displayName || 'Unknown';
-            const score = parseESPNScore((c.score || 'E').toString().trim());
+            const rawScoreStr = (c.score || 'E').toString().trim();
+
+            // Cut detection — check score string, status type, and display value
+            const statusVal = (c.status?.type?.name || c.status?.displayValue || '').toLowerCase();
+            const scoreStrUpper = rawScoreStr.toUpperCase();
+            const isCut = scoreStrUpper === 'CUT' || scoreStrUpper === 'WD' || scoreStrUpper === 'DQ'
+              || c.status?.type?.id === '3'
+              || statusVal.includes('cut') || statusVal.includes('wd') || statusVal.includes('withdrew');
+
+            // Parse score — if it says CUT/WD use the numeric score if available, else null
+            const score = isCut ? null : parseESPNScore(rawScoreStr);
 
             // Position
-            const pos = c.status?.position?.displayName || '–';
+            const pos = c.status?.position?.displayName || (isCut ? 'CUT' : '–');
 
             // Today's round score — last linescore entry
             const linescores = c.linescores || [];
@@ -1204,13 +1215,9 @@ async function fetchESPN() {
             const todayParsed = todayRaw ? parseESPNScore(todayRaw.toString().trim()) : null;
             const todayStr = todayParsed !== null ? fmtScore(todayParsed) : '–';
 
-            // Thru holes
+            // Thru holes — F if cut/finished
             const thruRaw = c.status?.thru ?? null;
-            const thru = (thruRaw !== null && String(thruRaw).trim() !== '') ? String(thruRaw) : (c.status?.displayValue || '–');
-
-            // Cut detection — type id 3 = cut, or status says cut/wd
-            const statusVal = (c.status?.type?.name || c.status?.displayValue || '').toLowerCase();
-            const isCut = c.status?.type?.id === '3' || statusVal.includes('cut') || statusVal.includes('wd') || statusVal.includes('withdrew');
+            const thru = isCut ? 'F' : (thruRaw !== null && String(thruRaw).trim() !== '') ? String(thruRaw) : (c.status?.displayValue || '–');
 
             espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
             return { name, score, pos, today: todayStr, thru, isCut };
