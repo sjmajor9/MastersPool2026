@@ -833,9 +833,9 @@ const COL = {
   tiebreaker: 7    // Column H
 };
 
-// CUT LINE — adjust as needed. Scores worse than this miss the cut.
-// "E" = 0, "-1" = -1, etc.  Set to null to disable cut logic during rounds 1-2.
-const CUT_LINE = 1; // e.g. +1 means anyone over +1 misses the cut
+// CUT LINE — players at this score or worse are considered cut
+// Masters 2026 cut was +5
+const CUT_LINE = 5; // anyone +5 or worse is cut
 
 /* ═══════════════════════════════════════════════════════════ */
 
@@ -1204,12 +1204,16 @@ async function fetchESPN() {
               : (scoreObj || 'E');
             const scoreStr = scoreRaw.toString().trim().toUpperCase();
 
-            // Cut detection — check score displayValue, score object status, and any status fields
+            // Cut detection — apply our own cut line + catch ESPN's own cut flags
             const scoreStatus = typeof scoreObj === 'object' ? (scoreObj?.status || scoreObj?.type || '') : '';
             const statusVal = (c.status?.type?.name || c.status?.displayValue || scoreStatus || '').toLowerCase();
-            const isCut = scoreStr === 'CUT' || scoreStr === 'WD' || scoreStr === 'DQ' || scoreStr === 'W/D'
+            const espnSaysCut = scoreStr === 'CUT' || scoreStr === 'WD' || scoreStr === 'DQ' || scoreStr === 'W/D'
               || statusVal.includes('cut') || statusVal.includes('wd') || statusVal.includes('withdrew')
               || (typeof scoreObj === 'object' && (scoreObj?.cut === true || scoreObj?.isCut === true));
+            // Also apply our own cut line — anyone at CUT_LINE or worse is cut
+            const numericScore = parseESPNScore(scoreStr);
+            const overCutLine = numericScore !== null && numericScore >= CUT_LINE;
+            const isCut = espnSaysCut || overCutLine;
 
             // Parse numeric score
             const score = isCut ? null : parseESPNScore(scoreStr);
@@ -1258,7 +1262,9 @@ async function fetchESPN() {
               const todayStr = todayParsed !== null ? fmtScore(todayParsed) : '–';
               const rawThru = p.thru ?? p.holes_played ?? p.holesPlayed ?? null;
               const thru = rawThru ? String(rawThru).trim() : '–';
-              const isCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
+              const mastersApiCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
+              const overCutLine = safeScore !== null && safeScore >= CUT_LINE;
+              const isCut = mastersApiCut || overCutLine;
               espnScores[name] = { score: safeScore, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
               return { name, score: safeScore, pos, today: todayStr, thru, isCut };
             });

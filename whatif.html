@@ -421,6 +421,9 @@ const COL = {
   tiebreaker: 7
 };
 
+// Masters 2026 cut line — +5 or worse is cut
+const CUT_LINE = 5;
+
 let allEntries = [];
 let espnScores = {};
 let simOverride = null;
@@ -540,7 +543,9 @@ async function fetchESPN() {
     competitors.forEach(c => {
       const name = c.athlete?.displayName || 'Unknown';
       const score = parseESPNScore((c.score || 'E').toString());
-      const isCut = c.status?.type?.id === '3' || (c.status?.displayValue||'').toLowerCase().includes('cut');
+      const espnCut = c.status?.type?.id === '3' || (c.status?.displayValue||'').toLowerCase().includes('cut');
+      const overCutLine = score !== null && score >= CUT_LINE;
+      const isCut = espnCut || overCutLine;
       espnScores[name] = {
         score,
         pos: c.status?.position?.displayName || '–',
