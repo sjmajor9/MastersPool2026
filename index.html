@@ -775,18 +775,14 @@
 
       <!-- Pool Standings -->
       <div class="section-header">
-        <h2 class="section-title">Pool Standings — Top 50</h2>
+        <h2 class="section-title">Final Leaderboard — Top 50</h2>
         <div class="section-line"></div>
       </div>
 
       <div class="leaderboard-layout">
         <!-- Main leaderboard -->
         <div class="leaderboard-main">
-          <div class="search-wrap">
-            <span class="search-icon">🔍</span>
-            <input class="search-input" id="search-input" type="text" placeholder="Search your name…" oninput="filterPool(this.value)" />
-          </div>
-          <div class="search-count" id="search-count"></div>
+    
 
           <div class="pool-table-wrap">
             <div id="pool-loading" class="loading-state">
@@ -1165,29 +1161,18 @@ function renderPoolTable() {
 
 function filterPool(query) {
   const tbody = document.getElementById('pool-tbody');
-  const countEl = document.getElementById('search-count');
   const noResults = document.getElementById('no-results');
-  const q = (query || '').trim().toLowerCase();
 
-  // If searching, show all matching entries (capped at 350); otherwise top 50
-  const pool = q
-    ? allScoredEntries.filter(s => s.entry.name.toLowerCase().includes(q)).slice(0, 350)
-    : allScoredEntries.slice(0, 50);
+  // Always show top 50 only — final leaderboard
+  const pool = allScoredEntries.slice(0, 50);
 
   if (pool.length === 0) {
     tbody.innerHTML = '';
     noResults.style.display = 'block';
-    countEl.textContent = 'No entries found';
     return;
   }
 
   noResults.style.display = 'none';
-
-  if (q) {
-    countEl.textContent = `${pool.length} result${pool.length !== 1 ? 's' : ''} for "${query}"`;
-  } else {
-    countEl.textContent = '';
-  }
 
   tbody.innerHTML = pool.map(s => {
     const { entry, totalScore, madeCut, countable } = s;
