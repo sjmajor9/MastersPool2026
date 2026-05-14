@@ -802,6 +802,11 @@
         <div class="hero-info-sub" id="hero-leader-score">Loading…</div>
       </div>
       <div class="hero-info-block">
+        <div class="hero-info-label">Tournament Leader</div>
+        <div class="hero-info-value" id="hero-tourn-leader">—</div>
+        <div class="hero-info-sub" id="hero-tourn-score">Loading…</div>
+      </div>
+      <div class="hero-info-block">
         <div class="hero-info-label">Weather · Newtown Square</div>
         <div class="hero-info-value" id="hero-weather-temp">—</div>
         <div class="hero-info-sub" id="hero-weather-cond">Loading…</div>
@@ -1310,7 +1315,7 @@ async function fetchESPN() {
 
     // ── ESPN API (primary) ───────────────────────────────────
     console.log("=== FETCHING ESPN ===");
-    const espnRes = await tryFetch('https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260514&tournamentId=401811946');
+    const espnRes = await tryFetch('https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260514&tournamentId=401811947');
     console.log("ESPN res:", espnRes ? "got response" : "null/failed");
     if (espnRes) {
       try {
