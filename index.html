@@ -316,6 +316,72 @@
       color: var(--gold);
     }
 
+    /* ─── PICKS STATS ─── */
+    .picks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 50px;
+    }
+    .picks-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(197,165,97,0.2);
+      border-radius: 4px;
+      padding: 18px 20px;
+      overflow: hidden;
+    }
+    .picks-card-title {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+      font-weight: 600;
+    }
+    .picks-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .picks-bar-name {
+      font-size: 13px;
+      color: var(--cream);
+      width: 160px;
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .picks-bar-wrap {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .picks-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(to right, var(--gold), var(--gold-light));
+      transition: width 0.6s ease;
+    }
+    .picks-bar-count {
+      font-size: 12px;
+      color: var(--gold-light);
+      width: 28px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .picks-overall-card {
+      grid-column: 1 / -1;
+      background: rgba(197,165,97,0.06);
+      border-color: rgba(197,165,97,0.3);
+    }
+    .picks-overall-card .picks-bar-fill {
+      background: linear-gradient(to right, #0053FF, var(--gold));
+    }
+
     /* ─── PRIZE + LEADERBOARD LAYOUT ─── */
     .leaderboard-layout {
       display: flex;
@@ -736,11 +802,6 @@
         <div class="hero-info-sub" id="hero-leader-score">Loading…</div>
       </div>
       <div class="hero-info-block">
-        <div class="hero-info-label">Entries</div>
-        <div class="hero-info-value" id="hero-entries-alive">—</div>
-        <div class="hero-info-sub" id="hero-entries-sub">of pool</div>
-      </div>
-      <div class="hero-info-block">
         <div class="hero-info-label">Weather · Newtown Square</div>
         <div class="hero-info-value" id="hero-weather-temp">—</div>
         <div class="hero-info-sub" id="hero-weather-cond">Loading…</div>
@@ -771,6 +832,18 @@
           🔮 Simulate a "What If" Scenario
         </a>
         <p style="font-size:12px;color:rgba(245,240,232,0.35);margin-top:10px;letter-spacing:0.5px;">See how the Pool Leaderboard changes with a hypothetical score for one player</p>
+      </div>
+
+      <!-- Picks Stats -->
+      <div class="section-header">
+        <h2 class="section-title">Pick Breakdown</h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="picks-grid" id="picks-grid">
+        <div class="loading-state" style="grid-column:1/-1">
+          <div class="loading-spinner"></div>
+          <div>Loading picks data…</div>
+        </div>
       </div>
 
       <!-- Pool Standings -->
@@ -871,14 +944,14 @@
 const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTyI-aC2qQXOQSzk9n1m8iRuvxiaPb9yWfE_LjZuDjlk3fTMvfCqYPvszZdtMlm7S8uilbua-_vsmJ4/pub?output=csv';
 
 const COL = {
-  name:       0,   // Column A
-  golfer1:    1,   // Column B
-  golfer2:    2,   // Column C
-  golfer3:    3,   // Column D
-  golfer4:    4,   // Column E
-  golfer5:    5,   // Column F
-  golfer6:    6,   // Column G
-  tiebreaker: 7    // Column H
+  name:       0,   // Column A - Team Name
+  tiebreaker: 1,   // Column B - Tiebreaker Score
+  golfer1:    2,   // Column C - Golfer 1
+  golfer2:    3,   // Column D - Golfer 2
+  golfer3:    4,   // Column E - Golfer 3
+  golfer4:    5,   // Column F - Golfer 4
+  golfer5:    6,   // Column G - Golfer 5
+  golfer6:    7    // Column H - Golfer 6
 };
 
 // CUT LINE — set to null now that round 2 is complete
@@ -977,6 +1050,7 @@ async function fetchEntries() {
     const csv = await res.text();
     allEntries = parseCSV(csv);
     allEntries.forEach(e => e.golfers.forEach(g => poolGolfers.add(parseName(g))));
+    renderPicksStats();
     // Only render if ESPN scores are already loaded — otherwise init() will trigger it
     if (Object.keys(espnScores).length > 0) {
       renderPoolTable();
@@ -1409,6 +1483,63 @@ async function fetchESPN() {
   }
 }
 
+// ── Picks Stats ──────────────────────────────────────────────
+function renderPicksStats() {
+  const grid = document.getElementById('picks-grid');
+  if (!grid || !allEntries.length) return;
+
+  const slots = ['Golfer 1','Golfer 2','Golfer 3','Golfer 4','Golfer 5','Golfer 6'];
+  const TOP = 5; // show top 5 per slot
+
+  // Count picks per slot
+  const slotCounts = slots.map((label, i) => {
+    const counts = {};
+    allEntries.forEach(e => {
+      const g = (e.golfers[i] || '').trim();
+      if (g) counts[g] = (counts[g] || 0) + 1;
+    });
+    return { label, counts };
+  });
+
+  // Overall counts across all slots
+  const overallCounts = {};
+  allEntries.forEach(e => {
+    e.golfers.forEach(g => {
+      const name = (g || '').trim();
+      if (name) overallCounts[name] = (overallCounts[name] || 0) + 1;
+    });
+  });
+
+  function buildCard(title, counts, isOverall) {
+    const sorted = Object.entries(counts)
+      .sort((a,b) => b[1] - a[1])
+      .slice(0, isOverall ? 10 : TOP);
+    if (!sorted.length) return '';
+    const max = sorted[0][1];
+    const bars = sorted.map(([name, count]) => {
+      const pct = Math.round((count / max) * 100);
+      return `<div class="picks-bar-row">
+        <div class="picks-bar-name" title="${name}">${name}</div>
+        <div class="picks-bar-wrap">
+          <div class="picks-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="picks-bar-count">${count}</div>
+      </div>`;
+    }).join('');
+    return `<div class="picks-card ${isOverall ? 'picks-overall-card' : ''}">
+      <div class="picks-card-title">${title}</div>
+      ${bars}
+    </div>`;
+  }
+
+  let html = buildCard('Most Picked Overall', overallCounts, true);
+  slotCounts.forEach(({ label, counts }) => {
+    html += buildCard(label, counts, false);
+  });
+
+  grid.innerHTML = html;
+}
+
 // ── What If Simulator ─────────────────────────────────────────
 let whatIfOverride = null; // { name, score }
 
@@ -1529,7 +1660,7 @@ function updateHeroLeader() {
   const cls = scoreVal !== null && scoreVal < 0 ? 'under' : scoreVal !== null && scoreVal > 0 ? 'over' : '';
 
   const tied = allScoredEntries.filter(s => s.totalScore === scoreVal && s.madeCut === leader.madeCut);
-  let displayName = tied.length > 1 ? `${tied.length} Entries Tied` : leader.entry.name;
+  let displayName = tied.length > 1 ? 'Tied' : leader.entry.name;
 
   leaderEl.textContent = displayName;
   leaderEl.className = `hero-info-value ${cls}`;
