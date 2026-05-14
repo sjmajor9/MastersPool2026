@@ -1019,21 +1019,27 @@ function parseName(raw) {
 function lookupGolfer(name) {
   const key = parseName(name);
 
-  // Fuzzy match helper — exact first, then last name
   function findInScores(searchKey) {
+    // 1. Exact match
     for (const [k, v] of Object.entries(espnScores)) {
       if (parseName(k) === searchKey) return v;
     }
+    // 2. Last name match
     const lastName = searchKey.split(' ').pop();
     for (const [k, v] of Object.entries(espnScores)) {
       if (parseName(k).split(' ').pop() === lastName) return v;
+    }
+    // 3. Contains match (handles initials, accents, etc)
+    for (const [k, v] of Object.entries(espnScores)) {
+      const ek = parseName(k);
+      if (ek.includes(searchKey) || searchKey.includes(ek)) return v;
     }
     return null;
   }
 
   // Apply What If override if active
   if (whatIfOverride && (key === whatIfOverride.name || key.split(' ').pop() === whatIfOverride.name.split(' ').pop())) {
-    const base = findInScores(whatIfOverride.name) || { pos: '–', today: '–', thru: '–', status: 'active' };
+    const base = findInScores(whatIfOverride.name) || findInScores(key) || { pos: '–', today: '–', thru: '–', status: 'active' };
     return { ...base, score: whatIfOverride.score };
   }
 
@@ -1335,18 +1341,16 @@ async function fetchESPN() {
             // c.score is a plain string e.g. "-12", "+4", "E"
             const scoreStr = (c.score || 'E').toString().trim().toUpperCase();
 
-            // Cut detection — players with exactly 2 linescores missed the cut
-            // Active players in round 3 have 3 linescores; cut players have 2
+            // Cut detection — only explicit strings (CUT/WD/DQ)
+            // Never use linescore count — breaks during rounds 1 and 2
             const linescores = c.linescores || [];
-            const roundsPlayed = linescores.length;
-            const missedCutByRounds = roundsPlayed === 2;
-            const scoreStrCut = scoreStr === 'CUT' || scoreStr === 'WD' || scoreStr === 'DQ';
-            const isCut = missedCutByRounds || scoreStrCut;
+            const scoreStrCut = scoreStr === 'CUT' || scoreStr === 'WD' || scoreStr === 'DQ' || scoreStr === 'W/D';
+            const isCut = scoreStrCut;
 
             // Parse numeric score
-            const score = isCut ? parseESPNScore(scoreStr) : parseESPNScore(scoreStr);
+            const score = parseESPNScore(scoreStr);
 
-            // Position — not in this API response, derive from order
+            // Position — derive from sorted order later
             const pos = isCut ? 'CUT' : '–';
 
             // Today's round score — last linescore entry
@@ -1354,8 +1358,10 @@ async function fetchESPN() {
             const todayParsed = todayRaw ? parseESPNScore(todayRaw.toString().trim()) : null;
             const todayStr = todayParsed !== null ? fmtScore(todayParsed) : '–';
 
-            // Thru — not in this API response
-            const thru = isCut ? 'F' : '–';
+            // Thru — use status displayValue or last linescore period
+            const thruRaw = c.status?.thru ?? linescores.length ?? null;
+            const thru = isCut ? 'F' : (thruRaw ? String(thruRaw) : '–');
+
 
             espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
             return { name, score, pos, today: todayStr, thru, isCut };
@@ -1655,6 +1661,25 @@ function updateHeroLeader() {
     leaderEl.textContent = '—';
     scoreEl.textContent = 'Loading…';
     return;
+  }
+
+  // Update tournament leader from ESPN scores
+  const tournLeaderEl = document.getElementById('hero-tourn-leader');
+  const tournScoreEl = document.getElementById('hero-tourn-score');
+  if (tournLeaderEl && Object.keys(espnScores).length > 0) {
+    const active = Object.entries(espnScores)
+      .filter(([,v]) => v.status !== 'cut' && v.score !== null)
+      .sort(([,a],[,b]) => a.score - b.score);
+    if (active.length) {
+      const [tName, tData] = active[0];
+      const tScore = fmtScore(tData.score);
+      const tCls = tData.score < 0 ? 'under' : tData.score > 0 ? 'over' : '';
+      const tTied = active.filter(([,v]) => v.score === tData.score);
+      const tDisplay = tTied.length > 1 ? `${tName.split(' ').pop()} +${tTied.length-1}` : tName.split(' ').pop();
+      tournLeaderEl.textContent = tDisplay;
+      tournLeaderEl.className = `hero-info-value ${tCls}`;
+      tournScoreEl.textContent = tScore;
+    }
   }
 
   const leader = allScoredEntries[0];
