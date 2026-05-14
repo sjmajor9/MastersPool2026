@@ -892,10 +892,10 @@
 
       <!-- Live Odds -->
       <div class="section-header">
-        <h2 class="section-title">Live Odds — Top 10 Favorites</h2>
+        <h2 class="section-title">Tournament Top 10</h2>
         <div class="section-line"></div>
       </div>
-      <p class="odds-note" id="odds-note">Win probability via ESPN · Updates every 3 minutes</p>
+      <p class="odds-note">Current tournament leaderboard · Updates every 3 minutes</p>
       <div class="odds-grid" id="odds-grid">
         <div class="loading-state" style="grid-column:1/-1;padding:30px">
           <div class="loading-spinner"></div>
@@ -1561,69 +1561,49 @@ async function fetchESPN() {
 }
 
 // ── Live Odds ─────────────────────────────────────────────────
-let espnOdds = []; // store raw odds data from ESPN
-
 function renderOdds() {
   const grid = document.getElementById('odds-grid');
   if (!grid) return;
 
-  // Use ESPN winProbability if available, otherwise use top active players by score
   const active = Object.entries(espnScores)
     .filter(([,v]) => v.status !== 'cut' && v.score !== null)
     .sort(([,a],[,b]) => a.score - b.score)
     .slice(0, 10);
 
   if (!active.length) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(245,240,232,0.4)">Odds will appear once the tournament begins</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(245,240,232,0.4)">Scores will appear once the tournament begins</div>';
     return;
   }
 
-  // Use ESPN odds if we have them, otherwise use win probability from scores
-  const items = espnOdds.length ? espnOdds.slice(0, 10) : active.map(([name, data], i) => ({
-    name,
-    odds: data.odds || null,
-    winProb: data.winProbability || null,
-    score: data.score,
-    pos: data.pos || String(i + 1)
-  }));
+  // Assign positions with ties
+  let pos = 1;
+  const items = active.map(([name, data], i) => {
+    const prev = i > 0 ? active[i-1][1] : null;
+    if (prev && prev.score === data.score) {
+      // tied
+    } else {
+      pos = i + 1;
+    }
+    const tied = active.filter(([,v]) => v.score === data.score).length > 1;
+    return { name, score: data.score, today: data.today, thru: data.thru, pos: (tied ? 'T' : '') + pos };
+  });
 
   grid.innerHTML = items.map((item, i) => {
-    const displayOdds = item.odds
-      ? item.odds
-      : item.winProb
-        ? `${Math.round(item.winProb * 100)}%`
-        : fmtScore(item.score);
-    const oddsLabel = item.odds ? 'To Win' : item.winProb ? 'Win Prob' : 'Score';
-    const lastName = item.name.split(' ').slice(-1)[0];
-    const firstName = item.name.split(' ').slice(0, -1).join(' ');
+    const scoreStr = fmtScore(item.score);
+    const cls = item.score < 0 ? 'under' : item.score > 0 ? 'over' : 'even';
+    const thruDisplay = item.thru && item.thru !== '–' ? `Thru ${item.thru}` : 'Today';
     return `<div class="odds-card">
-      <div class="odds-rank">${i + 1}</div>
+      <div class="odds-rank" style="color:${i === 0 ? 'var(--gold)' : 'rgba(197,165,97,0.4)'}">${item.pos}</div>
       <div>
         <div class="odds-name">${item.name}</div>
-        <div class="odds-name-sub">${oddsLabel} · Pos ${item.pos || '–'}</div>
+        <div class="odds-name-sub">Today: ${item.today || '–'} · ${thruDisplay}</div>
       </div>
-      <div class="odds-value">${displayOdds}</div>
+      <div class="odds-value score-cell ${cls}" style="font-size:22px">${scoreStr}</div>
     </div>`;
   }).join('');
 }
 
-// Parse ESPN odds/win probability from competitor data
 function parseESPNOdds(competitors) {
-  espnOdds = competitors
-    .filter(c => c.odds || c.winProbability)
-    .sort((a, b) => {
-      const wa = parseFloat(a.winProbability) || 0;
-      const wb = parseFloat(b.winProbability) || 0;
-      return wb - wa;
-    })
-    .slice(0, 10)
-    .map(c => ({
-      name: c.athlete?.displayName || 'Unknown',
-      odds: c.odds?.moneyLine ? (c.odds.moneyLine > 0 ? `+${c.odds.moneyLine}` : `${c.odds.moneyLine}`) : null,
-      winProb: c.winProbability ? (c.winProbability * 100).toFixed(1) + '%' : null,
-      score: parseESPNScore((c.score || 'E').toString()),
-      pos: c.status?.position?.displayName || '–'
-    }));
   renderOdds();
 }
 
