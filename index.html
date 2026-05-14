@@ -316,6 +316,57 @@
       color: var(--gold);
     }
 
+    /* ─── ODDS SECTION ─── */
+    .odds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 50px;
+    }
+    .odds-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(197,165,97,0.2);
+      border-radius: 4px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .odds-rank {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: rgba(197,165,97,0.4);
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .odds-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cream);
+    }
+    .odds-name-sub {
+      font-size: 11px;
+      color: rgba(245,240,232,0.4);
+      margin-top: 2px;
+    }
+    .odds-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold-light);
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .odds-note {
+      font-size: 11px;
+      color: rgba(245,240,232,0.35);
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+    }
+
     /* ─── PICKS STATS ─── */
     .picks-grid {
       display: grid;
@@ -839,6 +890,19 @@
         <p style="font-size:12px;color:rgba(245,240,232,0.35);margin-top:10px;letter-spacing:0.5px;">See how the Pool Leaderboard changes with a hypothetical score for one player</p>
       </div>
 
+      <!-- Live Odds -->
+      <div class="section-header">
+        <h2 class="section-title">Live Odds — Top 10 Favorites</h2>
+        <div class="section-line"></div>
+      </div>
+      <p class="odds-note" id="odds-note">Win probability via ESPN · Updates every 3 minutes</p>
+      <div class="odds-grid" id="odds-grid">
+        <div class="loading-state" style="grid-column:1/-1;padding:30px">
+          <div class="loading-spinner"></div>
+          <div>Loading odds…</div>
+        </div>
+      </div>
+
       <!-- Picks Stats -->
       <div class="section-header">
         <h2 class="section-title">Pick Breakdown</h2>
@@ -1062,6 +1126,7 @@ async function fetchEntries() {
     allEntries = parseCSV(csv);
     allEntries.forEach(e => e.golfers.forEach(g => poolGolfers.add(parseName(g))));
     renderPicksStats();
+  renderOdds();
     // Only render if ESPN scores are already loaded — otherwise init() will trigger it
     if (Object.keys(espnScores).length > 0) {
       renderPoolTable();
@@ -1474,6 +1539,7 @@ async function fetchESPN() {
 
     if (allEntries.length) renderPoolTable();
     updateHeroLeader();
+          parseESPNOdds(competitors);
 
   } catch(err) {
     document.getElementById('espn-loading').style.display = 'none';
@@ -1492,6 +1558,73 @@ async function fetchESPN() {
       document.getElementById('last-updated').textContent = 'Tournament starts April 9th · 7:25 AM ET';
     }
   }
+}
+
+// ── Live Odds ─────────────────────────────────────────────────
+let espnOdds = []; // store raw odds data from ESPN
+
+function renderOdds() {
+  const grid = document.getElementById('odds-grid');
+  if (!grid) return;
+
+  // Use ESPN winProbability if available, otherwise use top active players by score
+  const active = Object.entries(espnScores)
+    .filter(([,v]) => v.status !== 'cut' && v.score !== null)
+    .sort(([,a],[,b]) => a.score - b.score)
+    .slice(0, 10);
+
+  if (!active.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(245,240,232,0.4)">Odds will appear once the tournament begins</div>';
+    return;
+  }
+
+  // Use ESPN odds if we have them, otherwise use win probability from scores
+  const items = espnOdds.length ? espnOdds.slice(0, 10) : active.map(([name, data], i) => ({
+    name,
+    odds: data.odds || null,
+    winProb: data.winProbability || null,
+    score: data.score,
+    pos: data.pos || String(i + 1)
+  }));
+
+  grid.innerHTML = items.map((item, i) => {
+    const displayOdds = item.odds
+      ? item.odds
+      : item.winProb
+        ? `${Math.round(item.winProb * 100)}%`
+        : fmtScore(item.score);
+    const oddsLabel = item.odds ? 'To Win' : item.winProb ? 'Win Prob' : 'Score';
+    const lastName = item.name.split(' ').slice(-1)[0];
+    const firstName = item.name.split(' ').slice(0, -1).join(' ');
+    return `<div class="odds-card">
+      <div class="odds-rank">${i + 1}</div>
+      <div>
+        <div class="odds-name">${item.name}</div>
+        <div class="odds-name-sub">${oddsLabel} · Pos ${item.pos || '–'}</div>
+      </div>
+      <div class="odds-value">${displayOdds}</div>
+    </div>`;
+  }).join('');
+}
+
+// Parse ESPN odds/win probability from competitor data
+function parseESPNOdds(competitors) {
+  espnOdds = competitors
+    .filter(c => c.odds || c.winProbability)
+    .sort((a, b) => {
+      const wa = parseFloat(a.winProbability) || 0;
+      const wb = parseFloat(b.winProbability) || 0;
+      return wb - wa;
+    })
+    .slice(0, 10)
+    .map(c => ({
+      name: c.athlete?.displayName || 'Unknown',
+      odds: c.odds?.moneyLine ? (c.odds.moneyLine > 0 ? `+${c.odds.moneyLine}` : `${c.odds.moneyLine}`) : null,
+      winProb: c.winProbability ? (c.winProbability * 100).toFixed(1) + '%' : null,
+      score: parseESPNScore((c.score || 'E').toString()),
+      pos: c.status?.position?.displayName || '–'
+    }));
+  renderOdds();
 }
 
 // ── Picks Stats ──────────────────────────────────────────────
