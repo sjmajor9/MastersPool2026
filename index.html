@@ -316,6 +316,144 @@
       color: var(--gold);
     }
 
+    /* ─── ENTRY LOOKUP ─── */
+    .entry-lookup-wrap {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(197,165,97,0.25);
+      border-radius: 4px;
+      padding: 24px;
+      margin-bottom: 40px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .entry-lookup-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 200px;
+    }
+    .entry-lookup-field label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .entry-lookup-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(197,165,97,0.25);
+      border-radius: 4px;
+      padding: 11px 14px;
+      font-size: 14px;
+      color: var(--cream);
+      font-family: 'Source Serif 4', serif;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .entry-lookup-input:focus { border-color: rgba(197,165,97,0.6); }
+    .entry-lookup-btn {
+      padding: 11px 28px;
+      background: var(--gold);
+      color: var(--green-deep);
+      border: none;
+      border-radius: 4px;
+      font-family: 'Source Serif 4', serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: background 0.15s;
+      height: 44px;
+      white-space: nowrap;
+    }
+    .entry-lookup-btn:hover { background: var(--gold-light); }
+    .entry-lookup-result {
+      margin-top: 20px;
+      display: none;
+    }
+    .entry-lookup-result.show { display: block; }
+    .entry-result-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+    .entry-result-score {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .entry-result-meta {
+      font-size: 13px;
+      color: rgba(245,240,232,0.45);
+      margin-bottom: 20px;
+    }
+    .entry-result-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .entry-result-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 4px;
+      padding: 14px 16px;
+    }
+    .entry-result-card.counting {
+      border-color: rgba(197,165,97,0.4);
+      background: rgba(197,165,97,0.06);
+    }
+    .entry-result-card.missed {
+      opacity: 0.45;
+    }
+    .entry-result-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .entry-result-card-name { font-size: 15px; font-weight: 600; color: var(--cream); }
+    .entry-result-card-score {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .entry-result-card-sub { font-size: 11px; color: rgba(245,240,232,0.4); margin-top: 4px; }
+    .entry-no-results {
+      font-size: 14px;
+      color: rgba(245,240,232,0.4);
+      padding: 10px 0;
+    }
+    /* Dropdown suggestion */
+    .lookup-suggestions { position: relative; flex: 1; min-width: 200px; }
+    .lookup-dropdown {
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      background: #001540;
+      border: 1px solid rgba(197,165,97,0.3);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      z-index: 100;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+    .lookup-dropdown.show { display: block; }
+    .lookup-dropdown-item {
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--cream);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.1s;
+    }
+    .lookup-dropdown-item:hover { background: rgba(197,165,97,0.1); }
+
     /* ─── ODDS SECTION ─── */
     .odds-grid {
       display: grid;
@@ -889,6 +1027,21 @@
         </a>
         <p style="font-size:12px;color:rgba(245,240,232,0.35);margin-top:10px;letter-spacing:0.5px;">See how the Pool Leaderboard changes with a hypothetical score for one player</p>
       </div>
+
+      <!-- Entry Lookup -->
+      <div class="section-header">
+        <h2 class="section-title">Look Up Your Entry</h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="entry-lookup-wrap">
+        <div class="lookup-suggestions">
+          <label style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:6px;">Your Name</label>
+          <input class="entry-lookup-input" id="lookup-input" type="text" placeholder="Start typing your name…" autocomplete="off" />
+          <div class="lookup-dropdown" id="lookup-dropdown"></div>
+        </div>
+        <button class="entry-lookup-btn" onclick="lookupEntry()">View My Entry</button>
+      </div>
+      <div class="entry-lookup-result" id="entry-lookup-result"></div>
 
       <!-- Live Odds -->
       <div class="section-header">
@@ -1558,6 +1711,87 @@ async function fetchESPN() {
       document.getElementById('last-updated').textContent = 'Tournament starts April 9th · 7:25 AM ET';
     }
   }
+}
+
+// ── Entry Lookup ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('lookup-input');
+  const dropdown = document.getElementById('lookup-dropdown');
+  if (!input || !dropdown) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q || q.length < 1) { dropdown.classList.remove('show'); return; }
+    const matches = allEntries.filter(e => e.name.toLowerCase().includes(q)).slice(0, 8);
+    if (!matches.length) { dropdown.classList.remove('show'); return; }
+    dropdown.innerHTML = matches.map(e =>
+      `<div class="lookup-dropdown-item" data-name="${e.name.replace(/"/g,'&quot;')}">${e.name}</div>`
+    ).join('');
+    dropdown.classList.add('show');
+  });
+
+  dropdown.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const item = e.target.closest('.lookup-dropdown-item');
+    if (item) {
+      input.value = item.dataset.name;
+      dropdown.classList.remove('show');
+      lookupEntry();
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.lookup-suggestions')) dropdown.classList.remove('show');
+  });
+});
+
+function lookupEntry() {
+  const name = document.getElementById('lookup-input').value.trim();
+  const resultEl = document.getElementById('entry-lookup-result');
+  if (!name) return;
+
+  const entry = allEntries.find(e => e.name.toLowerCase() === name.toLowerCase());
+  if (!entry) {
+    resultEl.innerHTML = `<div class="entry-no-results">No entry found for "${name}". Check your spelling and try again.</div>`;
+    resultEl.classList.add('show');
+    return;
+  }
+
+  const { scored, countable, totalScore, madeCut, cutMissed } = scoreEntry(entry);
+  const countingNames = new Set(countable.map(g => parseName(g.name)));
+  const scoreStr = fmtScore(totalScore);
+  const cls = totalScore !== null && totalScore < 0 ? 'under' : totalScore !== null && totalScore > 0 ? 'over' : 'even';
+
+  const cutStatus = madeCut
+    ? `<span class="cut-pill made">Made Cut</span>`
+    : (cutMissed.length >= 3 ? `<span class="cut-pill missed">MC</span>` : `<span class="cut-pill pending">Pending</span>`);
+
+  const cards = scored.map(g => {
+    const isCounting = countingNames.has(parseName(g.name));
+    const isCut = g.status === 'cut';
+    const cardClass = isCut ? 'missed' : isCounting ? 'counting' : '';
+    const badge = isCounting ? `<span class="counting-badge">Counting</span>` : isCut ? `<span class="cut-pill missed" style="font-size:10px">Cut</span>` : '';
+    const thruDisplay = g.thru && g.thru !== '–' ? `Thru ${g.thru}` : '';
+    return `<div class="entry-result-card ${cardClass}">
+      <div class="entry-result-card-header">
+        <div>
+          <div class="entry-result-card-name">${g.name}</div>
+          <div class="entry-result-card-sub">${g.pos && g.pos !== '–' ? `Pos: ${g.pos}` : 'Pending'} ${thruDisplay ? '· ' + thruDisplay : ''}</div>
+        </div>
+        <div class="entry-result-card-score ${scoreClass(g.score)}">${fmtScore(g.score)}</div>
+      </div>
+      <div style="margin-top:8px">${badge}</div>
+    </div>`;
+  }).join('');
+
+  resultEl.innerHTML = `
+    <div class="entry-result-name">${entry.name}</div>
+    <div class="entry-result-score ${cls}">${scoreStr}</div>
+    <div class="entry-result-meta">${cutStatus} &nbsp;·&nbsp; Tiebreaker: ${entry.tiebreaker || '–'} &nbsp;·&nbsp; Best 4 of 6 counting</div>
+    <div class="entry-result-cards">${cards}</div>
+  `;
+  resultEl.classList.add('show');
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ── Live Odds ─────────────────────────────────────────────────
