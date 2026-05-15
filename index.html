@@ -2010,22 +2010,28 @@ function updateHeroLeader() {
     return;
   }
 
-  // Update tournament leader from ESPN scores
+  // Update tournament leader — find player with lowest score
   const tournLeaderEl = document.getElementById('hero-tourn-leader');
   const tournScoreEl = document.getElementById('hero-tourn-score');
   if (tournLeaderEl && Object.keys(espnScores).length > 0) {
     const active = Object.entries(espnScores)
-      .filter(([,v]) => v.status !== 'cut' && v.score !== null)
+      .filter(([,v]) => v.status !== 'cut' && v.score !== null && !isNaN(v.score))
       .sort(([,a],[,b]) => a.score - b.score);
     if (active.length) {
       const [tName, tData] = active[0];
-      const tScore = fmtScore(tData.score);
-      const tCls = tData.score < 0 ? 'under' : tData.score > 0 ? 'over' : '';
-      const tTied = active.filter(([,v]) => v.score === tData.score);
-      const tDisplay = tTied.length > 1 ? `${tName.split(' ').pop()} +${tTied.length-1}` : tName.split(' ').pop();
+      const lowestScore = tData.score;
+      const tCls = lowestScore < 0 ? 'under' : lowestScore > 0 ? 'over' : '';
+      const tTied = active.filter(([,v]) => v.score === lowestScore);
+      // Show last name only, or "Tied" if multiple
+      const tDisplay = tTied.length > 1
+        ? `${tTied[0][0].split(' ').pop()} & ${tTied.length - 1} others`
+        : tName.split(' ').slice(-1)[0];
       tournLeaderEl.textContent = tDisplay;
       tournLeaderEl.className = `hero-info-value ${tCls}`;
-      tournScoreEl.textContent = tScore;
+      tournScoreEl.textContent = fmtScore(lowestScore);
+    } else {
+      tournLeaderEl.textContent = '—';
+      tournScoreEl.textContent = 'Loading…';
     }
   }
 
