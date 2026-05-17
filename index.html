@@ -1452,13 +1452,19 @@ function renderPoolTable() {
   document.getElementById('pool-loading').style.display = 'none';
 
   const scored = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+  // Winning score for tiebreaker — closest guess wins
+  const WINNING_SCORE = -8;
+
   scored.sort((a, b) => {
     if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
-    if (a.totalScore === null && b.totalScore === null) return a.entry.tiebreaker - b.entry.tiebreaker;
+    if (a.totalScore === null && b.totalScore === null) {
+      return Math.abs(a.entry.tiebreaker - WINNING_SCORE) - Math.abs(b.entry.tiebreaker - WINNING_SCORE);
+    }
     if (a.totalScore === null) return 1;
     if (b.totalScore === null) return -1;
     if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
-    return a.entry.tiebreaker - b.entry.tiebreaker;
+    // Tied on score — closest tiebreaker guess to winning score wins
+    return Math.abs(a.entry.tiebreaker - WINNING_SCORE) - Math.abs(b.entry.tiebreaker - WINNING_SCORE);
   });
 
   let pos = 1;

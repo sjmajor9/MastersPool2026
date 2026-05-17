@@ -656,13 +656,16 @@ function renderTable(isSimulating) {
   if (!tbody) return;
 
   const scored = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+  const WINNING_SCORE = -8;
   scored.sort((a,b) => {
     if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
-    if (a.totalScore === null && b.totalScore === null) return a.entry.tiebreaker - b.entry.tiebreaker;
+    if (a.totalScore === null && b.totalScore === null) {
+      return Math.abs(a.entry.tiebreaker - WINNING_SCORE) - Math.abs(b.entry.tiebreaker - WINNING_SCORE);
+    }
     if (a.totalScore === null) return 1;
     if (b.totalScore === null) return -1;
     if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
-    return a.entry.tiebreaker - b.entry.tiebreaker;
+    return Math.abs(a.entry.tiebreaker - WINNING_SCORE) - Math.abs(b.entry.tiebreaker - WINNING_SCORE);
   });
 
   let pos = 1;
@@ -730,13 +733,16 @@ function runSim() {
 
   // Store live ranks BEFORE applying override so we can show movement
   const preSim = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+  const WS = -8;
   preSim.sort((a,b) => {
     if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
-    if (a.totalScore === null && b.totalScore === null) return a.entry.tiebreaker - b.entry.tiebreaker;
+    if (a.totalScore === null && b.totalScore === null) {
+      return Math.abs(a.entry.tiebreaker - WS) - Math.abs(b.entry.tiebreaker - WS);
+    }
     if (a.totalScore === null) return 1;
     if (b.totalScore === null) return -1;
     if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
-    return a.entry.tiebreaker - b.entry.tiebreaker;
+    return Math.abs(a.entry.tiebreaker - WS) - Math.abs(b.entry.tiebreaker - WS);
   });
   let lp = 1;
   preSim.forEach((s, i) => {
