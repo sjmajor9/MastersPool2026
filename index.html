@@ -454,6 +454,47 @@
     }
     .lookup-dropdown-item:hover { background: rgba(197,165,97,0.1); }
 
+    /* ─── PRIZE SIDEBAR ─── */
+    .leaderboard-layout {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .leaderboard-main { flex: 1; min-width: 0; }
+    .prize-sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(197,165,97,0.2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .prize-sidebar-header {
+      background: rgba(197,165,97,0.12);
+      border-bottom: 1px solid rgba(197,165,97,0.3);
+      padding: 12px 16px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
+      text-align: center;
+    }
+    .prize-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+    }
+    .prize-row:last-child { border-bottom: none; }
+    .prize-pos { color: rgba(245,240,232,0.55); }
+    .prize-amt { color: var(--gold-light); font-weight: 600; }
+    @media (max-width: 700px) {
+      .leaderboard-layout { flex-direction: column; }
+      .prize-sidebar { width: 100%; }
+    }
+
     /* ─── ODDS SECTION ─── */
     .odds-grid {
       display: grid;
@@ -1056,17 +1097,7 @@
         </div>
       </div>
 
-      <!-- Picks Stats -->
-      <div class="section-header">
-        <h2 class="section-title">Pick Breakdown</h2>
-        <div class="section-line"></div>
-      </div>
-      <div class="picks-grid" id="picks-grid">
-        <div class="loading-state" style="grid-column:1/-1">
-          <div class="loading-spinner"></div>
-          <div>Loading picks data…</div>
-        </div>
-      </div>
+
 
       <!-- Pool Standings -->
       <div class="section-header">
@@ -1101,6 +1132,16 @@
           </div>
         </div>
 
+        <!-- Prize Sidebar -->
+        <div class="prize-sidebar">
+          <div class="prize-sidebar-header">💰 Prizes</div>
+          <div class="prize-row"><span class="prize-pos">1st</span><span class="prize-amt">$1,200</span></div>
+          <div class="prize-row"><span class="prize-pos">2nd</span><span class="prize-amt">$600</span></div>
+          <div class="prize-row"><span class="prize-pos">3rd</span><span class="prize-amt">$200</span></div>
+          <div class="prize-row"><span class="prize-pos">4th</span><span class="prize-amt">$100</span></div>
+          <div class="prize-row"><span class="prize-pos">5th</span><span class="prize-amt">$50</span></div>
+          <div class="prize-row"><span class="prize-pos">6th–10th</span><span class="prize-amt">$40</span></div>
+        </div>
       </div>
 
       <!-- ESPN Leaderboard -->
@@ -1181,736 +1222,56 @@ const COL = {
 // CUT_LINE — reading cut status directly from ESPN API
 const CUT_LINE = null;
 // Missed cut list — update after Round 2 cut is made
-const MISSED_CUT_PLAYERS = new Set([]);
-
-
-
-/* ═══════════════════════════════════════════════════════════ */
-
-let allEntries = [];
-let espnScores = {}; // { "Scottie Scheffler": { score: -10, pos: "1", today: -4, thru: "F", status: "active"|"cut" } }
-let poolGolfers = new Set();
-
-// ── Routing ─────────────────────────────────────────────────
-function getEntryParam() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('entry');
-}
-function showMain() {
-  document.getElementById('main-view').style.display = 'block';
-  document.getElementById('entry-view').style.display = 'none';
-  history.pushState({}, '', window.location.pathname);
-}
-function showEntry(name) {
-  document.getElementById('main-view').style.display = 'none';
-  document.getElementById('entry-view').style.display = 'block';
-  history.pushState({}, '', `?entry=${encodeURIComponent(name)}`);
-  renderEntryDetail(name);
-}
-
-// ── Score helpers ────────────────────────────────────────────
-function parseESPNScore(str) {
-  if (!str) return null;
-  const s = str.toString().trim().toUpperCase();
-  if (s === 'E' || s === 'EVEN' || s === '0') return 0;
-  // Tee times (e.g. "7:35 AM", "2:10 PM") — not yet started, treat as E
-  if (/^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(s)) return 0;
-  const n = parseInt(s);
-  return isNaN(n) ? null : n;
-}
-function fmtScore(n) {
-  if (n === null || n === undefined || isNaN(n)) return '–';
-  if (n === 0) return 'E';
-  return n > 0 ? `+${n}` : `${n}`;
-}
-function scoreClass(n) {
-  if (n === null || n === undefined || isNaN(n)) return '';
-  if (n < 0) return 'under';
-  if (n > 0) return 'over';
-  return 'even';
-}
-function parseName(raw) {
-  // Normalize golfer name for matching (lowercase, trimmed)
-  return (raw || '').trim().toLowerCase();
-}
-function lookupGolfer(name) {
-  const key = parseName(name);
-
-  function findInScores(searchKey) {
-    // 1. Exact match
-    for (const [k, v] of Object.entries(espnScores)) {
-      if (parseName(k) === searchKey) return v;
-    }
-    // 2. Last name match
-    const lastName = searchKey.split(' ').pop();
-    for (const [k, v] of Object.entries(espnScores)) {
-      if (parseName(k).split(' ').pop() === lastName) return v;
-    }
-    // 3. Contains match (handles initials, accents, etc)
-    for (const [k, v] of Object.entries(espnScores)) {
-      const ek = parseName(k);
-      if (ek.includes(searchKey) || searchKey.includes(ek)) return v;
-    }
-    return null;
-  }
-
-  // Apply What If override if active
-  if (whatIfOverride && (key === whatIfOverride.name || key.split(' ').pop() === whatIfOverride.name.split(' ').pop())) {
-    const base = findInScores(whatIfOverride.name) || findInScores(key) || { pos: '–', today: '–', thru: '–', status: 'active' };
-    return { ...base, score: whatIfOverride.score };
-  }
-
-  return findInScores(key);
-}
-
-// ── Google Sheets CSV fetch ───────────────────────────────────
-async function fetchEntries() {
-  if (!SHEETS_CSV_URL || SHEETS_CSV_URL === 'YOUR_GOOGLE_SHEETS_CSV_URL_HERE') {
-    document.getElementById('config-banner').classList.add('show');
-    document.getElementById('pool-loading').style.display = 'none';
-    document.getElementById('pool-error').style.display = 'block';
-    document.getElementById('pool-error').textContent = 'Google Sheets URL not configured. See setup instructions above.';
-    return;
-  }
-  try {
-    const res = await fetch(SHEETS_CSV_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const csv = await res.text();
-    allEntries = parseCSV(csv);
-    allEntries.forEach(e => e.golfers.forEach(g => poolGolfers.add(parseName(g))));
-    renderPicksStats();
-  renderOdds();
-    // Only render if ESPN scores are already loaded — otherwise init() will trigger it
-    if (Object.keys(espnScores).length > 0) {
-      renderPoolTable();
-      updateHeroLeader();
-    }
-  } catch(err) {
-    document.getElementById('pool-loading').style.display = 'none';
-    document.getElementById('pool-error').style.display = 'block';
-    document.getElementById('pool-error').textContent = `Could not load entries: ${err.message}`;
-  }
-}
-
-function parseCSV(text) {
-  const lines = text.trim().split('\n').slice(1); // skip header row
-  return lines.map(line => {
-    const cols = parseCSVLine(line);
-    const golfers = [
-      cols[COL.golfer1], cols[COL.golfer2], cols[COL.golfer3],
-      cols[COL.golfer4], cols[COL.golfer5], cols[COL.golfer6]
-    ].map(g => (g||'').trim()).filter(Boolean);
-    return {
-      name: (cols[COL.name] || '').trim(),
-      golfers,
-      tiebreaker: parseFloat(cols[COL.tiebreaker]) || 0
-    };
-  }).filter(e => e.name);
-}
-
-function parseCSVLine(line) {
-  const result = [];
-  let cur = '', inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') { inQuotes = !inQuotes; continue; }
-    if (ch === ',' && !inQuotes) { result.push(cur); cur = ''; continue; }
-    cur += ch;
-  }
-  result.push(cur);
-  return result;
-}
-
-// ── Entry scoring ─────────────────────────────────────────────
-function scoreEntry(entry) {
-  const scored = entry.golfers.map(g => {
-    const data = lookupGolfer(g);
-    const score = data ? data.score : null;
-    // Apply cut line directly here — if score >= CUT_LINE, mark as cut regardless of API status
-    const apiStatus = data ? data.status : 'pending';
-    const overCutLine = CUT_LINE !== null && score !== null && score >= CUT_LINE;
-    const inCutList = MISSED_CUT_PLAYERS.has(parseName(g));
-    const status = (apiStatus === 'cut' || overCutLine || inCutList) ? 'cut' : apiStatus;
-    return {
-      name: g,
-      score,
-      pos: data ? data.pos : null,
-      today: data ? data.today : null,
-      thru: data ? (data.thru || null) : null,
-      status
-    };
-  });
-
-  // Determine which golfers made the cut
-  const active = scored.filter(g => g.status !== 'cut');
-  const cutMissed = scored.filter(g => g.status === 'cut');
-
-  // Best 4 of those who made cut (or pending) — treat null score on active as 0 (not yet started)
-  const countable = active
-    .map(g => ({ ...g, score: g.score !== null ? g.score : 0 }))
-    .sort((a,b) => a.score - b.score)
-    .slice(0, 4);
-
-  const totalScore = countable.length >= 4
-    ? countable.reduce((s, g) => s + g.score, 0)
-    : null;
-
-  // MC if fewer than 4 golfers are still active (status !== 'cut')
-  const madeCut = active.length >= 4;
-
-  return { scored, countable, totalScore, madeCut, cutMissed };
-}
-
-// ── Render pool standings ─────────────────────────────────────
-let allScoredEntries = []; // stored for search filtering
-
-function renderPoolTable() {
-  const tbody = document.getElementById('pool-tbody');
-  document.getElementById('pool-loading').style.display = 'none';
-
-  // Score each entry
-  const scored = allEntries.map(entry => ({
-    entry,
-    ...scoreEntry(entry)
-  }));
-
-  // Sort: made cut first, then by totalScore asc, then tiebreaker asc
-  scored.sort((a, b) => {
-    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
-    if (a.totalScore === null && b.totalScore === null) return a.entry.tiebreaker - b.entry.tiebreaker;
-    if (a.totalScore === null) return 1;
-    if (b.totalScore === null) return -1;
-    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
-    return a.entry.tiebreaker - b.entry.tiebreaker;
-  });
-
-  // Assign positions (before slicing so ranks are accurate)
-  let pos = 1;
-  scored.forEach((s, i) => {
-    s.rank = pos;
-    if (i < scored.length - 1) {
-      const next = scored[i+1];
-      if (s.totalScore !== null && next.totalScore === s.totalScore && s.madeCut === next.madeCut) {
-        // tie — don't increment
-      } else {
-        pos = i + 2;
-      }
-    }
-  });
-
-  // Store full list for search, but display only top 50
-  allScoredEntries = scored;
-  document.getElementById('pool-table').style.display = 'table';
-
-  // Reset search and render top 50
-  const searchInput = document.getElementById('search-input');
-  filterPool(searchInput ? searchInput.value : '');
-}
-
-function filterPool(query) {
-  const tbody = document.getElementById('pool-tbody');
-  const noResults = document.getElementById('no-results');
-
-  // Always show top 50 only — final leaderboard
-  const pool = allScoredEntries.slice(0, 50);
-
-  if (pool.length === 0) {
-    tbody.innerHTML = '';
-    noResults.style.display = 'block';
-    return;
-  }
-
-  noResults.style.display = 'none';
-
-  tbody.innerHTML = pool.map(s => {
-    const { entry, totalScore, madeCut, countable } = s;
-    let cutPill;
-    if (madeCut) {
-      cutPill = `<span class="cut-pill made">Made Cut</span>`;
-    } else if (s.cutMissed.length >= 3) {
-      cutPill = `<span class="cut-pill missed">MC</span>`;
-    } else if (s.cutMissed.length > 0) {
-      cutPill = `<span class="cut-pill pending">${s.cutMissed.length} Cut</span>`;
-    } else {
-      cutPill = `<span class="cut-pill pending">Pending</span>`;
-    }
-    const topNames = countable.map(g => g.name).join(', ');
-    return `<tr onclick="showEntry('${entry.name.replace(/'/g,"\\'")}')">
-      <td class="rank-cell">${s.cutMissed.length >= 3 && !madeCut ? '<span class="cut-pill missed" style="font-size:11px;padding:2px 8px">MC</span>' : s.rank}</td>
-      <td>
-        <div class="entry-name">${entry.name}</div>
-        <div class="golfers-mini">${topNames || entry.golfers.slice(0,4).join(', ')}</div>
-      </td>
-      <td class="center score-cell ${scoreClass(totalScore)}">${fmtScore(totalScore)}</td>
-      <td class="center">${cutPill}</td>
-      <td class="center" style="font-size:13px;color:rgba(245,240,232,0.55)">${entry.tiebreaker !== 0 ? entry.tiebreaker : '–'}</td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Render entry detail ───────────────────────────────────────
-function renderEntryDetail(name) {
-  const entry = allEntries.find(e => e.name.toLowerCase() === name.toLowerCase());
-  const el = document.getElementById('entry-content');
-  if (!entry) {
-    el.innerHTML = `<div class="error-msg">Entry not found: "${name}"</div>`;
-    return;
-  }
-  const { scored, countable, totalScore, madeCut } = scoreEntry(entry);
-  const countingNames = new Set(countable.map(g => parseName(g.name)));
-
-  const cutStatus = madeCut
-    ? `<span class="cut-pill made">Made Cut</span>`
-    : `<span class="cut-pill pending">Pending</span>`;
-
-  el.innerHTML = `
-    <div class="entry-hero">
-      <div>
-        <div class="entry-hero-name">${entry.name}</div>
-        <div class="entry-hero-meta">
-          ${cutStatus} &nbsp;·&nbsp; Tiebreaker: ${entry.tiebreaker !== 0 ? entry.tiebreaker : '–'}
-        </div>
-      </div>
-      <div class="entry-score-block">
-        <div class="entry-score-label">Pool Score</div>
-        <div class="entry-score-big ${scoreClass(totalScore)}">${fmtScore(totalScore)}</div>
-        <div class="entry-tiebreaker">Best 4 of 6 counting</div>
-      </div>
-    </div>
-
-    <div class="section-header">
-      <h2 class="section-title">Picks</h2>
-      <div class="section-line"></div>
-    </div>
-    <div class="golfer-cards">
-      ${scored.map(g => {
-        const isCounting = countingNames.has(parseName(g.name));
-        const isCut = g.status === 'cut';
-        const cardClass = isCut ? 'cut-missed' : (isCounting ? 'counting' : '');
-        const badge = isCounting
-          ? `<span class="counting-badge">Counting</span>`
-          : (isCut ? `<span class="cut-pill missed" style="font-size:10px">Cut</span>` : '');
-        const posDisplay = (g.pos && g.pos !== '–') ? `Position: ${g.pos}` : (g.score !== null ? 'Scoring' : 'Not yet started');
-        const thruDisplay = (g.thru && g.thru !== '–' && g.thru !== 'null') ? `Thru: ${g.thru}` : '';
-        return `<div class="golfer-card ${cardClass}">
-          <div class="golfer-card-header">
-            <div>
-              <div class="golfer-card-name">${g.name}</div>
-              <div class="golfer-card-pos">${posDisplay}</div>
-            </div>
-            <div class="golfer-card-score ${scoreClass(g.score)}">${fmtScore(g.score)}</div>
-          </div>
-          <div class="golfer-card-status">
-            ${badge}
-            ${thruDisplay ? `<span style="font-size:12px;color:rgba(245,240,232,0.4);margin-left:6px">${thruDisplay}</span>` : ''}
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-}
-
-// ── Masters.com + ESPN Leaderboard fetch ─────────────────────
-async function fetchESPN() {
-  const PROXIES = [
-    'https://corsproxy.io/?',
-    'https://api.allorigins.win/raw?url=',
-    'https://corsproxy.org/?'
-  ];
-
-  async function tryFetch(url) {
-    // Try direct first (works server-side / some browsers)
-    try {
-      const r = await fetch(url);
-      if (r.ok) return r;
-    } catch(e) {}
-    // Try each proxy
-    for (const proxy of PROXIES) {
-      try {
-        const r = await fetch(proxy + encodeURIComponent(url));
-        if (r.ok) return r;
-      } catch(e) {}
-    }
-    return null;
-  }
-
-  try {
-    let rows = null;
-
-    // ── ESPN API (primary) ───────────────────────────────────
-    console.log("=== FETCHING ESPN ===");
-    const espnRes = await tryFetch('https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260514&tournamentId=401811947');
-    console.log("ESPN res:", espnRes ? "got response" : "null/failed");
-    if (espnRes) {
-      try {
-        const data = await espnRes.json();
-        console.log("ESPN events count:", data?.events?.length);
-        const events = data.events || [];
-        // Use first event — we're already requesting Masters specifically via tournamentId
-        const event = events[0];
-        if (!event) throw new Error('No Masters event returned');
-        const competitors = event?.competitions?.[0]?.competitors || [];
-        console.log('Event name:', event?.name, '| Competitors:', competitors.length);
-        if (competitors.length) {
-          espnScores = {};
-          rows = competitors.map(c => {
-            const name = c.athlete?.displayName || 'Unknown';
-            // c.score can be a string like "E", "+3", or an object with displayValue/value
-            // c.score is a plain string e.g. "-12", "+4", "E"
-            const scoreStr = (c.score || 'E').toString().trim().toUpperCase();
-
-            // Cut detection — only explicit strings (CUT/WD/DQ)
-            // Never use linescore count — breaks during rounds 1 and 2
-            const linescores = c.linescores || [];
-            const scoreStrCut = scoreStr === 'CUT' || scoreStr === 'WD' || scoreStr === 'DQ' || scoreStr === 'W/D';
-            const isCut = scoreStrCut;
-
-            // Parse numeric score
-            const score = parseESPNScore(scoreStr);
-
-            // Position — derive from sorted order later
-            const pos = isCut ? 'CUT' : '–';
-
-            // Today's round score — last linescore entry
-            const todayRaw = linescores.length ? linescores[linescores.length - 1]?.displayValue : null;
-            const todayParsed = todayRaw ? parseESPNScore(todayRaw.toString().trim()) : null;
-            const todayStr = todayParsed !== null ? fmtScore(todayParsed) : '–';
-
-            // Thru — use status displayValue or last linescore period
-            const thruRaw = c.status?.thru ?? linescores.length ?? null;
-            const thru = isCut ? 'F' : (thruRaw ? String(thruRaw) : '–');
-
-
-            espnScores[name] = { score, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
-            return { name, score, pos, today: todayStr, thru, isCut };
-          });
-
-
-        }
-      } catch(e) { console.log('ESPN parse error:', e); }
-    }
-
-    // ── Fallback to masters.com ───────────────────────────────
-    if (!rows) {
-      const mastersRes = await tryFetch('https://www.masters.com/api/v1/leaderboard');
-      if (mastersRes) {
-        try {
-          const mData = await mastersRes.json();
-          const players = mData?.data?.player || mData?.leaderboard?.players || mData?.players || [];
-          if (players.length) {
-            espnScores = {};
-            rows = players.map(p => {
-              const name = `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
-              const rawScore = p.topar ?? p.to_par ?? p.overallPar ?? null;
-              const score = rawScore !== null ? parseESPNScore(String(rawScore)) : 0;
-              const safeScore = (score !== null && Math.abs(score) <= 30) ? score : 0;
-              const pos = String(p.pos || p.position || '–');
-              const rawToday = p.today ?? p.round_score ?? null;
-              const todayParsed = rawToday !== null ? parseESPNScore(String(rawToday)) : null;
-              const todayStr = todayParsed !== null ? fmtScore(todayParsed) : '–';
-              const rawThru = p.thru ?? p.holes_played ?? p.holesPlayed ?? null;
-              const thru = rawThru ? String(rawThru).trim() : '–';
-              const mastersApiCut = (p.status || '').toLowerCase().includes('cut') || pos === 'CUT';
-              const overCutLine = CUT_LINE !== null && safeScore !== null && safeScore >= CUT_LINE;
-              const isCut = mastersApiCut || overCutLine;
-              espnScores[name] = { score: safeScore, pos, today: todayStr, thru, status: isCut ? 'cut' : 'active' };
-              return { name, score: safeScore, pos, today: todayStr, thru, isCut };
-            });
-          }
-        } catch(e) { console.log('masters.com parse error:', e); }
-      }
-    }
-
-    if (!rows || !rows.length) throw new Error('No player data returned');
-
-    // Apply hardcoded cut list
-    rows = rows.map(r => ({
-      ...r,
-      isCut: r.isCut || MISSED_CUT_PLAYERS.has(parseName(r.name))
-    }));
-    // Sync back to espnScores
-    rows.forEach(r => { if (espnScores[r.name]) espnScores[r.name].status = r.isCut ? 'cut' : 'active'; });
-
-    // Update espnScores cut status and assign positions
-    const activeForPos = rows.filter(r => !r.isCut).sort((a,b) => (a.score||0) - (b.score||0));
-    let pNum = 1;
-    activeForPos.forEach((r, i) => {
-      const next = activeForPos[i+1];
-      const isTie = next && next.score === r.score;
-      r.pos = isTie ? 'T' + pNum : String(pNum);
-      if (!isTie) pNum = i + 2;
-    });
-    rows.forEach(r => {
-      if (espnScores[r.name]) {
-        espnScores[r.name].status = r.isCut ? 'cut' : 'active';
-        espnScores[r.name].pos = r.pos || (r.isCut ? 'CUT' : '–');
-      }
-    });
-
-    rows.sort((a,b) => {
-      if (a.isCut !== b.isCut) return a.isCut ? 1 : -1;
-      if (a.score === null) return 1;
-      if (b.score === null) return -1;
-      return a.score - b.score;
-    });
-
-    const tbody = document.getElementById('espn-tbody');
-    // Assign positions to sorted rows — only count active players
-    const activeRows = rows.filter(r => !r.isCut);
-    let lbPos = 1;
-    activeRows.forEach((r, i) => {
-      r.displayPos = lbPos;
-      const next = activeRows[i + 1];
-      if (next && next.score === r.score) {
-        // tie — don't increment
-      } else {
-        lbPos = i + 2;
-      }
-    });
-    rows.filter(r => r.isCut).forEach(r => r.displayPos = 'CUT');
-
-    tbody.innerHTML = rows.map(r => {
-      const inPool = poolGolfers.has(parseName(r.name));
-      const rowStyle = r.isCut ? 'opacity:0.5;' : '';
-      const posDisplay = r.isCut ? '<span class="cut-pill missed" style="font-size:10px">CUT</span>' : r.displayPos;
-      return `<tr class="${inPool ? 'golfer-in-pool' : ''}" style="${rowStyle}">
-        <td class="espn-pos">${posDisplay}</td>
-        <td>${r.name}${inPool ? '<span class="pool-dot"></span>' : ''}</td>
-        <td class="espn-score ${scoreClass(r.score)}">${fmtScore(r.score)}</td>
-        <td style="font-size:13px;color:rgba(245,240,232,0.6)">${r.today || '–'}</td>
-        <td style="font-size:13px;color:rgba(245,240,232,0.6)">${r.thru || '–'}</td>
-        <td class="center">${r.isCut ? '<span class="cut-pill missed">Cut</span>' : '<span class="cut-pill made">Active</span>'}</td>
-      </tr>`;
-    }).join('');
-
-    document.getElementById('espn-loading').style.display = 'none';
-    document.getElementById('espn-table').style.display = 'table';
-
-    const now = new Date();
-    document.getElementById('last-updated').textContent =
-      `Live · Updated ${now.toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit'})}`;
-
-    if (allEntries.length) renderPoolTable();
-    updateHeroLeader();
-          parseESPNOdds(competitors);
-
-  } catch(err) {
-    document.getElementById('espn-loading').style.display = 'none';
-    const errEl = document.getElementById('espn-error');
-    errEl.style.display = 'block';
-    errEl.style.background = 'rgba(201,168,76,0.08)';
-    errEl.style.borderColor = 'rgba(201,168,76,0.25)';
-    errEl.style.color = 'var(--gold-light)';
-    const tourneyStart = new Date('2026-05-14T07:00:00-04:00');
-    const now = new Date();
-    if (now >= tourneyStart) {
-      errEl.innerHTML = '🔄 <strong>Fetching live scores… please wait.</strong><br><span style="font-size:12px;opacity:0.7">The Masters is underway — scores are loading. This page will retry automatically.</span>';
-      document.getElementById('last-updated').textContent = 'Retrying…';
-    } else {
-      errEl.innerHTML = '⛳ <strong>Live scores will appear here once the tournament begins.</strong><br><span style="font-size:12px;opacity:0.7">The 2026 Masters tees off Thursday April 9th at 7:25 AM ET — check back then!</span>';
-      document.getElementById('last-updated').textContent = 'Tournament starts April 9th · 7:25 AM ET';
-    }
-  }
-}
-
-// ── Entry Lookup ─────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('lookup-input');
-  const dropdown = document.getElementById('lookup-dropdown');
-  if (!input || !dropdown) return;
-
-  input.addEventListener('input', () => {
-    const q = input.value.trim().toLowerCase();
-    if (!q || q.length < 1) { dropdown.classList.remove('show'); return; }
-    const matches = allEntries.filter(e => e.name.toLowerCase().includes(q)).slice(0, 8);
-    if (!matches.length) { dropdown.classList.remove('show'); return; }
-    dropdown.innerHTML = matches.map(e =>
-      `<div class="lookup-dropdown-item" data-name="${e.name.replace(/"/g,'&quot;')}">${e.name}</div>`
-    ).join('');
-    dropdown.classList.add('show');
-  });
-
-  dropdown.addEventListener('mousedown', e => {
-    e.preventDefault();
-    const item = e.target.closest('.lookup-dropdown-item');
-    if (item) {
-      input.value = item.dataset.name;
-      dropdown.classList.remove('show');
-      lookupEntry();
-    }
-  });
-
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.lookup-suggestions')) dropdown.classList.remove('show');
-  });
-});
-
-function lookupEntry() {
-  const name = document.getElementById('lookup-input').value.trim();
-  const resultEl = document.getElementById('entry-lookup-result');
-  if (!name) return;
-
-  const entry = allEntries.find(e => e.name.toLowerCase() === name.toLowerCase());
-  if (!entry) {
-    resultEl.innerHTML = `<div class="entry-no-results">No entry found for "${name}". Check your spelling and try again.</div>`;
-    resultEl.classList.add('show');
-    return;
-  }
-
-  const { scored, countable, totalScore, madeCut, cutMissed } = scoreEntry(entry);
-  const countingNames = new Set(countable.map(g => parseName(g.name)));
-  const scoreStr = fmtScore(totalScore);
-  const cls = totalScore !== null && totalScore < 0 ? 'under' : totalScore !== null && totalScore > 0 ? 'over' : 'even';
-
-  const cutStatus = madeCut
-    ? `<span class="cut-pill made">Made Cut</span>`
-    : (cutMissed.length >= 3 ? `<span class="cut-pill missed">MC</span>` : `<span class="cut-pill pending">Pending</span>`);
-
-  const cards = scored.map(g => {
-    const isCounting = countingNames.has(parseName(g.name));
-    const isCut = g.status === 'cut';
-    const cardClass = isCut ? 'missed' : isCounting ? 'counting' : '';
-    const badge = isCounting ? `<span class="counting-badge">Counting</span>` : isCut ? `<span class="cut-pill missed" style="font-size:10px">Cut</span>` : '';
-    const thruDisplay = g.thru && g.thru !== '–' ? `Thru ${g.thru}` : '';
-    return `<div class="entry-result-card ${cardClass}">
-      <div class="entry-result-card-header">
-        <div>
-          <div class="entry-result-card-name">${g.name}</div>
-          <div class="entry-result-card-sub">${g.pos && g.pos !== '–' ? `Pos: ${g.pos}` : 'Pending'} ${thruDisplay ? '· ' + thruDisplay : ''}</div>
-        </div>
-        <div class="entry-result-card-score ${scoreClass(g.score)}">${fmtScore(g.score)}</div>
-      </div>
-      <div style="margin-top:8px">${badge}</div>
-    </div>`;
-  }).join('');
-
-  resultEl.innerHTML = `
-    <div class="entry-result-name">${entry.name}</div>
-    <div class="entry-result-score ${cls}">${scoreStr}</div>
-    <div class="entry-result-meta">${cutStatus} &nbsp;·&nbsp; Tiebreaker: ${entry.tiebreaker || '–'} &nbsp;·&nbsp; Best 4 of 6 counting</div>
-    <div class="entry-result-cards">${cards}</div>
-  `;
-  resultEl.classList.add('show');
-  resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-// ── Live Odds ─────────────────────────────────────────────────
-function renderOdds() {
-  const grid = document.getElementById('odds-grid');
-  if (!grid) return;
-
-  const active = Object.entries(espnScores)
-    .filter(([,v]) => v.status !== 'cut' && v.score !== null)
-    .sort(([,a],[,b]) => a.score - b.score)
-    .slice(0, 10);
-
-  if (!active.length) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(245,240,232,0.4)">Scores will appear once the tournament begins</div>';
-    return;
-  }
-
-  // Assign positions with ties
-  let pos = 1;
-  const items = active.map(([name, data], i) => {
-    const prev = i > 0 ? active[i-1][1] : null;
-    if (prev && prev.score === data.score) {
-      // tied
-    } else {
-      pos = i + 1;
-    }
-    const tied = active.filter(([,v]) => v.score === data.score).length > 1;
-    return { name, score: data.score, today: data.today, thru: data.thru, pos: (tied ? 'T' : '') + pos };
-  });
-
-  grid.innerHTML = items.map((item, i) => {
-    const scoreStr = fmtScore(item.score);
-    const cls = item.score < 0 ? 'under' : item.score > 0 ? 'over' : 'even';
-    const thruDisplay = item.thru && item.thru !== '–' ? `Thru ${item.thru}` : 'Today';
-    return `<div class="odds-card">
-      <div class="odds-rank" style="color:${i === 0 ? 'var(--gold)' : 'rgba(197,165,97,0.4)'}">${item.pos}</div>
-      <div>
-        <div class="odds-name">${item.name}</div>
-        <div class="odds-name-sub">Today: ${item.today || '–'} · ${thruDisplay}</div>
-      </div>
-      <div class="odds-value score-cell ${cls}" style="font-size:22px">${scoreStr}</div>
-    </div>`;
-  }).join('');
-}
-
-function parseESPNOdds(competitors) {
-  renderOdds();
-}
-
-// ── Picks Stats ──────────────────────────────────────────────
-function renderPicksStats() {
-  const grid = document.getElementById('picks-grid');
-  if (!grid || !allEntries.length) return;
-
-  const slots = ['Golfer 1','Golfer 2','Golfer 3','Golfer 4','Golfer 5','Golfer 6'];
-  const TOP = 5; // show top 5 per slot
-
-  // Count picks per slot
-  const slotCounts = slots.map((label, i) => {
-    const counts = {};
-    allEntries.forEach(e => {
-      const g = (e.golfers[i] || '').trim();
-      if (g) counts[g] = (counts[g] || 0) + 1;
-    });
-    return { label, counts };
-  });
-
-  // Overall counts across all slots
-  const overallCounts = {};
-  allEntries.forEach(e => {
-    e.golfers.forEach(g => {
-      const name = (g || '').trim();
-      if (name) overallCounts[name] = (overallCounts[name] || 0) + 1;
-    });
-  });
-
-  function buildCard(title, counts, isOverall) {
-    const sorted = Object.entries(counts)
-      .sort((a,b) => b[1] - a[1])
-      .slice(0, isOverall ? 10 : TOP);
-    if (!sorted.length) return '';
-    const max = sorted[0][1];
-    const bars = sorted.map(([name, count]) => {
-      const pct = Math.round((count / max) * 100);
-      return `<div class="picks-bar-row">
-        <div class="picks-bar-name" title="${name}">${name}</div>
-        <div class="picks-bar-wrap">
-          <div class="picks-bar-fill" style="width:${pct}%"></div>
-        </div>
-        <div class="picks-bar-count">${count}</div>
-      </div>`;
-    }).join('');
-    return `<div class="picks-card ${isOverall ? 'picks-overall-card' : ''}">
-      <div class="picks-card-title">${title}</div>
-      ${bars}
-    </div>`;
-  }
-
-  let html = buildCard('Most Picked Overall', overallCounts, true);
-  slotCounts.forEach(({ label, counts }) => {
-    html += buildCard(label, counts, false);
-  });
-
-  grid.innerHTML = html;
-}
-
-// ── What If Simulator ─────────────────────────────────────────
-let whatIfOverride = null; // { name, score }
-
-function whatifNameInput(val) {
-  const dropdown = document.getElementById('whatif-dropdown');
-  const q = val.trim().toLowerCase();
-  if (!q || q.length < 2) { dropdown.classList.remove('show'); return; }
-
-  // Build list from pool golfers + ESPN field
-  const allNames = new Set([
-    ...Object.keys(espnScores),
-    ...allEntries.flatMap(e => e.golfers)
-  ]);
+// 2026 PGA Championship missed cut (cut at +4)
+const MISSED_CUT_PLAYERS = new Set([
+  'tommy fleetwood',
+  'viktor hovland',
+  'bryson dechambeau',
+  'max homa',
+  'robert macintyre',
+  'j.j. spaun',
+  'jj spaun',
+  'keegan bradley',
+  'sepp straka',
+  'russell henley',
+  'rory mcilroy',
+  'michael block',
+  'tyrell hatton',
+  'tyrrell hatton',
+  'garrick higgo',
+  'adam scott',
+  'matt fitzpatrick',
+  'alex fitzpatrick',
+  'justin thomas',
+  'cameron smith',
+  'min woo lee',
+  'ryan fox',
+  'danny willett',
+  'bubba watson',
+  'fred couples',
+  'vijay singh',
+  'mike weir',
+  'jose maria olazabal',
+  'angel cabrera',
+  'davis riley',
+  'harris english',
+  'tom hoge',
+  'joel dahmen',
+  'jhonattan vegas',
+  'billy horschel',
+  'andrew novak',
+  'brandon holtz',
+  'ethan fang',
+  'jackson herrington',
+  'mason howell',
+  'casey jarvis',
+  'naoyuki kataoka',
+  'aldrich potgieter',
+  'carlos ortiz',
+  'michael kim',
+  'johnny keefer',
+  'sami valimaki'
+]);
 
   const matches = [...allNames]
     .filter(n => n.toLowerCase().includes(q))
