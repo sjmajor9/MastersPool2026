@@ -1208,6 +1208,7 @@ const CUT_LINE = null;
 // Missed cut list — update after Round 2 cut is made
 // 2026 PGA Championship missed cut (cut at +4)
 // 2026 PGA Championship missed cut (cut at +4)
+// 2026 PGA Championship missed cut (cut at +4)
 const MISSED_CUT_PLAYERS = new Set([
   'wyndham clark',
   'sungjae im',
@@ -1336,16 +1337,24 @@ function parseName(r) { return (r || '').trim().toLowerCase(); }
 function lookupGolfer(name) {
   const key = parseName(name);
   function findInScores(searchKey) {
+    // 1. Exact match
     for (const [k, v] of Object.entries(espnScores)) {
       if (parseName(k) === searchKey) return v;
     }
-    const lastName = searchKey.split(' ').pop();
+    // 2. Last name + first initial match
+    const parts = searchKey.split(' ');
+    const lastName = parts[parts.length - 1];
+    const firstName = parts[0] || '';
     for (const [k, v] of Object.entries(espnScores)) {
-      if (parseName(k).split(' ').pop() === lastName) return v;
+      const ekParts = parseName(k).split(' ');
+      const ekLast = ekParts[ekParts.length - 1];
+      const ekFirst = ekParts[0] || '';
+      if (ekLast === lastName && firstName && ekFirst && ekFirst[0] === firstName[0]) return v;
     }
-    for (const [k, v] of Object.entries(espnScores)) {
-      const ek = parseName(k);
-      if (ek.includes(searchKey) || searchKey.includes(ek)) return v;
+    // 3. Unique last name only (length > 4 to avoid short common names)
+    if (lastName.length > 4) {
+      const lastMatches = Object.entries(espnScores).filter(([k]) => parseName(k).split(' ').pop() === lastName);
+      if (lastMatches.length === 1) return lastMatches[0][1];
     }
     return null;
   }
@@ -1508,7 +1517,13 @@ function renderEntryDetail(name) {
   const entry = allEntries.find(e => e.name.toLowerCase() === name.toLowerCase());
   const el = document.getElementById('entry-content');
   if (!entry) { el.innerHTML = '<div class="error-msg">Entry not found: "' + name + '"</div>'; return; }
+  // Always recalculate fresh from current ESPN scores
   const { scored, countable, totalScore, madeCut, cutMissed } = scoreEntry(entry);
+  // Also update allScoredEntries to stay in sync
+  const idx = allScoredEntries.findIndex(s => s.entry.name.toLowerCase() === name.toLowerCase());
+  if (idx >= 0) {
+    allScoredEntries[idx] = { ...allScoredEntries[idx], scored, countable, totalScore, madeCut, cutMissed };
+  }
   const countingNames = new Set(countable.map(g => parseName(g.name)));
   const cutStatus = madeCut
     ? '<span class="cut-pill made">Made Cut</span>'
