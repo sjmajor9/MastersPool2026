@@ -1470,6 +1470,16 @@ function renderPoolTable() {
     }
   });
 
+  // Debug — log Nora's calculated score
+  const noraEntry = scored.find(s => s.entry.name.toLowerCase().includes('nora'));
+  if (noraEntry) {
+    console.log('NORA leaderboard score:', noraEntry.totalScore);
+    console.log('NORA golfers:', noraEntry.entry.golfers);
+    noraEntry.entry.golfers.forEach(g => {
+      const data = lookupGolfer(g);
+      console.log(' -', g, '=> ESPN data:', data ? JSON.stringify({score: data.score, status: data.status}) : 'NOT FOUND');
+    });
+  }
   allScoredEntries = scored;
   filterPool('');
 }
