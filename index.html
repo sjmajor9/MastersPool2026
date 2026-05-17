@@ -1518,18 +1518,6 @@ function renderEntryDetail(name) {
 }
 
 
-  const matches = [...allNames]
-    .filter(n => n.toLowerCase().includes(q))
-    .slice(0, 8);
-
-  if (!matches.length) { dropdown.classList.remove('show'); return; }
-
-  dropdown.innerHTML = matches.map(n =>
-    `<div class="whatif-dropdown-item" onclick="selectWhatIfName('${n.replace(/'/g, "\\'")}')">${n}</div>`
-  ).join('');
-  dropdown.classList.add('show');
-}
-
 
 // ── What If Override ─────────────────────────────────────────
 let whatIfOverride = null;
