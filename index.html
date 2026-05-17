@@ -1477,7 +1477,8 @@ function renderPoolTable() {
 function filterPool(query) {
   const tbody = document.getElementById('pool-tbody');
   const noResults = document.getElementById('no-results');
-  const pool = allScoredEntries.slice(0, 50);
+  // Always recalculate fresh so leaderboard matches entry detail
+  const pool = allScoredEntries.map(s => ({ ...s, ...scoreEntry(s.entry), entry: s.entry, rank: s.rank })).slice(0, 50);
 
   if (!pool.length) {
     tbody.innerHTML = '';
