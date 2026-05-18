@@ -316,6 +316,93 @@
       color: var(--gold);
     }
 
+    /* ─── FINAL TOP 10 ─── */
+    .final-top10 {
+      background: linear-gradient(135deg, rgba(0,14,46,0.9) 0%, rgba(0,26,82,0.9) 100%);
+      border: 2px solid var(--gold);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+    .final-top10-header {
+      background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 100%);
+      padding: 16px 24px;
+      text-align: center;
+    }
+    .final-top10-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--green-deep);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .final-top10-header p {
+      font-size: 12px;
+      color: rgba(0,14,46,0.7);
+      margin-top: 2px;
+      letter-spacing: 1px;
+    }
+    .final-top10-row {
+      display: flex;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(197,165,97,0.15);
+      gap: 14px;
+      transition: background 0.15s;
+    }
+    .final-top10-row:last-child { border-bottom: none; }
+    .final-top10-row:hover { background: rgba(197,165,97,0.05); }
+    .final-pos {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--gold);
+      width: 32px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .final-pos.first { color: #FFD700; font-size: 26px; }
+    .final-pos.second { color: #C0C0C0; }
+    .final-pos.third { color: #CD7F32; }
+    .final-name {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--white);
+    }
+    .final-golfers {
+      font-size: 11px;
+      color: rgba(245,240,232,0.4);
+      margin-top: 2px;
+    }
+    .final-score {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+      width: 50px;
+      flex-shrink: 0;
+    }
+    .final-payout {
+      background: rgba(197,165,97,0.15);
+      border: 1px solid rgba(197,165,97,0.3);
+      border-radius: 4px;
+      padding: 4px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gold-light);
+      text-align: center;
+      min-width: 80px;
+      flex-shrink: 0;
+    }
+    .final-payout.top3 {
+      background: rgba(197,165,97,0.25);
+      border-color: var(--gold);
+      color: var(--gold);
+      font-size: 16px;
+    }
+
     /* ─── ENTRY LOOKUP ─── */
     .entry-lookup-wrap {
       background: rgba(255,255,255,0.04);
@@ -1053,6 +1140,75 @@
         <p style="font-size:12px;color:rgba(245,240,232,0.35);margin-top:10px;letter-spacing:0.5px;">See how the Pool Leaderboard changes with a hypothetical score for one player</p>
       </div>
 
+      <!-- Final Top 10 -->
+      <div class="final-top10">
+        <div class="final-top10-header">
+          <h2>🏆 Final Standings — Top 10</h2>
+          <p>2026 PGA Championship Pool · Aronimink Golf Club</p>
+        </div>
+
+        <div class="final-top10-row">
+          <div class="final-pos first">1</div>
+          <div><div class="final-name">JalenRines</div><div class="final-golfers">Aaron Rai, Ludvig Åberg, Cameron Smith, Jordan Spieth</div></div>
+          <div class="final-score under">-19</div>
+          <div class="final-payout top3">$1,150</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos second">2</div>
+          <div><div class="final-name">Cody Boo 1</div><div class="final-golfers">Justin Thomas, Matthias Schmid, Scottie Scheffler, Padraig Harrington</div></div>
+          <div class="final-score under">-13</div>
+          <div class="final-payout top3">$600</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos third">3</div>
+          <div><div class="final-name">Jtrap2</div><div class="final-golfers">Rory McIlroy, Cameron Smith, Justin Rose, Tom Hoge</div></div>
+          <div class="final-score under">-11</div>
+          <div class="final-payout top3">$200</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos">T4</div>
+          <div><div class="final-name">Nora 1</div><div class="final-golfers">Jon Rahm, Justin Rose, Padraig Harrington, Tom Hoge</div></div>
+          <div class="final-score under">-10</div>
+          <div class="final-payout">$60</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos">T4</div>
+          <div><div class="final-name">Rod McPhee 1</div><div class="final-golfers">Cameron Smith, Kurt Kitayama, Scottie Scheffler, Padraig Harrington</div></div>
+          <div class="final-score under">-10</div>
+          <div class="final-payout">$60</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos">T4</div>
+          <div><div class="final-name">Scote3</div><div class="final-golfers">Cameron Smith, Justin Rose, Scottie Scheffler, Harris English</div></div>
+          <div class="final-score under">-10</div>
+          <div class="final-payout">$60</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos">T4</div>
+          <div><div class="final-name">Scote2</div><div class="final-golfers">Justin Thomas, Rory McIlroy, Cameron Smith, Corey Conners</div></div>
+          <div class="final-score under">-10</div>
+          <div class="final-payout">$60</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos">T8</div>
+          <div><div class="final-name">Dwight Ackerman 2</div><div class="final-golfers">Rory McIlroy, Cameron Smith, Justin Rose, Nicolai Højgaard</div></div>
+          <div class="final-score under">-9</div>
+          <div class="final-payout">$40</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos">T8</div>
+          <div><div class="final-name">Emily</div><div class="final-golfers">Jon Rahm, Cameron Smith, Nick Taylor, Si Woo Kim</div></div>
+          <div class="final-score under">-9</div>
+          <div class="final-payout">$40</div>
+        </div>
+        <div class="final-top10-row">
+          <div class="final-pos">T8</div>
+          <div><div class="final-name">David Moreau</div><div class="final-golfers">Matthias Schmid, Chris Gotterup, Scottie Scheffler, Ryo Hisatsune</div></div>
+          <div class="final-score under">-9</div>
+          <div class="final-payout">$40</div>
+        </div>
+      </div>
+
       <!-- Entry Lookup -->
       <div class="section-header">
         <h2 class="section-title">Look Up Your Entry</h2>
@@ -1119,7 +1275,7 @@
         <!-- Prize Sidebar -->
         <div class="prize-sidebar">
           <div class="prize-sidebar-header">💰 Prizes</div>
-          <div class="prize-row"><span class="prize-pos">1st</span><span class="prize-amt">$1,200</span></div>
+          <div class="prize-row"><span class="prize-pos">1st</span><span class="prize-amt">$1,150</span></div>
           <div class="prize-row"><span class="prize-pos">2nd</span><span class="prize-amt">$600</span></div>
           <div class="prize-row"><span class="prize-pos">3rd</span><span class="prize-amt">$200</span></div>
           <div class="prize-row"><span class="prize-pos">4th</span><span class="prize-amt">$100</span></div>
@@ -1470,18 +1626,6 @@ function renderPoolTable() {
     }
   });
 
-  // Debug — log Nora's calculated score (exact name match)
-  const noraEntry = scored.find(s => s.entry.name.trim().toLowerCase() === 'nora');
-  if (noraEntry) {
-    console.log('NORA leaderboard score:', noraEntry.totalScore);
-    console.log('NORA golfers:', noraEntry.entry.golfers);
-    noraEntry.entry.golfers.forEach(g => {
-      const data = lookupGolfer(g);
-      console.log(' -', g, '=> ESPN data:', data ? JSON.stringify({score: data.score, status: data.status}) : 'NOT FOUND');
-    });
-  } else {
-    console.log('NORA not found - all entry names:', scored.map(s => s.entry.name));
-  }
   allScoredEntries = scored;
   filterPool('');
 }
@@ -1489,8 +1633,29 @@ function renderPoolTable() {
 function filterPool(query) {
   const tbody = document.getElementById('pool-tbody');
   const noResults = document.getElementById('no-results');
-  // Always recalculate fresh so leaderboard matches entry detail
-  const pool = allScoredEntries.map(s => ({ ...s, ...scoreEntry(s.entry), entry: s.entry, rank: s.rank })).slice(0, 50);
+
+  // Fully recalculate and re-sort from scratch every time
+  const WINNING_SCORE = -8;
+  const fresh = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+  fresh.sort((a, b) => {
+    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
+    if (a.totalScore === null && b.totalScore === null) return Math.abs(a.entry.tiebreaker - WINNING_SCORE) - Math.abs(b.entry.tiebreaker - WINNING_SCORE);
+    if (a.totalScore === null) return 1;
+    if (b.totalScore === null) return -1;
+    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
+    return Math.abs(a.entry.tiebreaker - WINNING_SCORE) - Math.abs(b.entry.tiebreaker - WINNING_SCORE);
+  });
+  let p = 1;
+  fresh.forEach((s, i) => {
+    s.rank = p;
+    if (i < fresh.length - 1) {
+      const next = fresh[i+1];
+      if (s.totalScore !== null && next.totalScore === s.totalScore && s.madeCut === next.madeCut) {}
+      else { p = i + 2; }
+    }
+  });
+  allScoredEntries = fresh;
+  const pool = fresh.slice(0, 50);
 
   if (!pool.length) {
     tbody.innerHTML = '';
