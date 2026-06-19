@@ -443,7 +443,7 @@ function parseCSV(text) {
 /* ═══ FETCH ENTRIES ════════════════════════════════════════ */
 async function fetchEntries() {
   try {
-    const res = await fetch(SHEETS_CSV_URL);
+    const res = await fetch(SHEETS_CSV_URL + '&cachebust=' + Date.now());
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const csv = await res.text();
     allEntries = parseCSV(csv);
