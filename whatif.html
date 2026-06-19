@@ -460,7 +460,19 @@ function scoreClass(n) {
   if (n > 0) return 'over';
   return 'even';
 }
-function parseName(r) { return (r || '').trim().toLowerCase(); }
+function normalizeName(str) {
+  if (!str) return '';
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\(a\)\s*$/i, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function parseName(r) { return normalizeName(r); }
 
 function lookupGolfer(name) {
   const key = parseName(name);

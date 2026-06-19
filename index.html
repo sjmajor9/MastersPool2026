@@ -370,7 +370,19 @@ function scoreClass(n) {
   if (n === null || isNaN(n)) return '';
   return n < 0 ? 'under' : n > 0 ? 'over' : 'even';
 }
-function parseName(r) { return (r || '').trim().toLowerCase(); }
+function normalizeName(str) {
+  if (!str) return '';
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\(a\)\s*$/i, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function parseName(r) { return normalizeName(r); }
 
 /* ═══ LOOKUP GOLFER ════════════════════════════════════════ */
 function lookupGolfer(name) {
