@@ -169,6 +169,49 @@
     .rank-change.down { color: #d96060; }
     .rank-change.same { color: rgba(245,240,232,0.3); }
 
+    /* ─── FINAL LEADERBOARD ─── */
+    .final-lb {
+      background: linear-gradient(135deg, rgba(0,9,24,0.95) 0%, rgba(0,26,82,0.95) 100%);
+      border: 2px solid var(--gold);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+    .final-lb-header {
+      background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 100%);
+      padding: 16px 24px;
+      text-align: center;
+    }
+    .final-lb-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--green-deep);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .final-lb-header p { font-size: 12px; color: rgba(0,14,46,0.65); margin-top: 2px; letter-spacing: 1px; }
+    .final-lb-row {
+      display: flex;
+      align-items: center;
+      padding: 13px 20px;
+      border-bottom: 1px solid rgba(197,165,97,0.15);
+      gap: 12px;
+    }
+    .final-lb-row:last-child { border-bottom: none; }
+    .final-lb-row:hover { background: rgba(197,165,97,0.05); }
+    .final-lb-pos { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; color: var(--gold); width: 36px; flex-shrink: 0; text-align: center; }
+    .final-lb-pos.gold { color: #FFD700; font-size: 24px; }
+    .final-lb-pos.silver { color: #C0C0C0; }
+    .final-lb-pos.bronze { color: #CD7F32; }
+    .final-lb-name { flex: 1; font-size: 15px; font-weight: 600; color: var(--white); }
+    .final-lb-sub { font-size: 11px; color: rgba(245,240,232,0.4); margin-top: 2px; }
+    .final-lb-score { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; width: 46px; text-align: center; flex-shrink: 0; }
+    .final-lb-tb { font-size: 12px; color: rgba(245,240,232,0.45); width: 60px; text-align: center; flex-shrink: 0; }
+    .final-lb-payout { background: rgba(197,165,97,0.15); border: 1px solid rgba(197,165,97,0.3); border-radius: 4px; padding: 4px 10px; font-size: 13px; font-weight: 700; color: var(--gold-light); min-width: 75px; text-align: center; flex-shrink: 0; }
+    .final-lb-payout.top3 { background: rgba(197,165,97,0.25); border-color: var(--gold); color: var(--gold); }
+    .final-lb-loading { text-align: center; padding: 30px; color: rgba(245,240,232,0.4); font-size: 14px; }
+
     footer { text-align: center; padding: 30px 20px; border-top: 1px solid rgba(197,165,97,0.15); font-size: 12px; color: rgba(245,240,232,0.3); letter-spacing: 1px; }
 
     @media (max-width: 600px) {
@@ -214,6 +257,15 @@
 <!-- MAIN VIEW -->
 <div id="main-view">
   <div class="container">
+
+    <!-- Final Leaderboard -->
+    <div class="final-lb" id="final-lb">
+      <div class="final-lb-header">
+        <h2>🏆 Final Standings — Top 10</h2>
+        <p>2026 US Open Pool · Shinnecock Hills · Winning Score: -4</p>
+      </div>
+      <div id="final-lb-body"><div class="final-lb-loading">Calculating final standings…</div></div>
+    </div>
 
     <!-- Entry Lookup -->
     <div class="section-header">
@@ -451,7 +503,7 @@ async function fetchEntries() {
     allEntries = parseCSV(csv);
     allEntries.forEach(e => e.golfers.forEach(g => poolGolfers.add(parseName(g))));
     renderPicksStats();
-    if (Object.keys(espnScores).length > 0) { renderPoolTable(); updateHeroLeader(); }
+    if (Object.keys(espnScores).length > 0) { renderPoolTable(); updateHeroLeader(); renderFinalLeaderboard(); }
   } catch(err) {
     document.getElementById('pool-loading').style.display = 'none';
     document.getElementById('pool-error').style.display = 'block';
@@ -532,7 +584,7 @@ async function fetchESPN() {
     const now = new Date();
     const lu = document.getElementById('last-updated');
     if (lu) lu.textContent = 'Live · Updated ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    if (allEntries.length) renderPoolTable();
+    if (allEntries.length) { renderPoolTable(); renderFinalLeaderboard(); }
     updateHeroLeader();
     renderOdds();
   } catch(err) {
@@ -797,6 +849,76 @@ function resetWhatIf() {
   renderPoolTable();
 }
 document.addEventListener('click', e => { if (!e.target.closest('.whatif-suggestions')) document.getElementById('whatif-dropdown')?.classList.remove('show'); });
+
+/* ═══ FINAL LEADERBOARD ════════════════════════════════════ */
+const FINAL_WINNING_SCORE = -4; // US Open 2026 winning score
+const FINAL_PAYOUTS = [1600, 800, 400, 100, 40, 40, 40, 40, 40, 40];
+
+function priceIsRightDistance(guess, target) {
+  // Price is Right: guessing UNDER is treated as worst (like going over)
+  // Closest to target WITHOUT going under wins
+  // If guess > target (over), distance = guess - target (bad, like going over the price)
+  // If guess < target (under), distance = Infinity (disqualified like going over in Price is Right)
+  // If guess === target, distance = 0 (perfect)
+  if (guess === target) return 0;
+  if (guess > target) return Infinity; // went over — disqualified
+  return target - guess; // under — closest without going over wins
+}
+
+function renderFinalLeaderboard() {
+  const body = document.getElementById('final-lb-body');
+  if (!body || !allEntries.length) return;
+
+  // Score all entries
+  const scored = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+
+  // Sort: made cut first, then by pool score asc, then by Price is Right tiebreaker
+  scored.sort((a, b) => {
+    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
+    if (a.totalScore === null && b.totalScore === null) {
+      return priceIsRightDistance(a.entry.tiebreaker, FINAL_WINNING_SCORE) - priceIsRightDistance(b.entry.tiebreaker, FINAL_WINNING_SCORE);
+    }
+    if (a.totalScore === null) return 1;
+    if (b.totalScore === null) return -1;
+    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
+    // Tied on score — apply Price is Right tiebreaker
+    return priceIsRightDistance(a.entry.tiebreaker, FINAL_WINNING_SCORE) - priceIsRightDistance(b.entry.tiebreaker, FINAL_WINNING_SCORE);
+  });
+
+  // Assign positions
+  let pos = 1;
+  scored.forEach((s, i) => {
+    s.finalRank = pos;
+    if (i < scored.length - 1) {
+      const next = scored[i + 1];
+      const sameTb = priceIsRightDistance(s.entry.tiebreaker, FINAL_WINNING_SCORE) === priceIsRightDistance(next.entry.tiebreaker, FINAL_WINNING_SCORE);
+      if (s.totalScore !== null && next.totalScore === s.totalScore && s.madeCut === next.madeCut && sameTb) {}
+      else { pos = i + 2; }
+    }
+  });
+
+  const top10 = scored.slice(0, 10);
+
+  body.innerHTML = top10.map((s, i) => {
+    const { entry, totalScore, madeCut, cutMissed } = s;
+    const payout = FINAL_PAYOUTS[i] || 0;
+    const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const posDisplay = scored.filter(x => x.finalRank === s.finalRank).length > 1 ? 'T' + s.finalRank : String(s.finalRank);
+    const cls = totalScore !== null && totalScore < 0 ? 'under' : totalScore !== null && totalScore > 0 ? 'over' : 'even';
+    const tbDist = priceIsRightDistance(entry.tiebreaker, FINAL_WINNING_SCORE);
+    const tbDisplay = tbDist === Infinity ? `${entry.tiebreaker} ↑` : entry.tiebreaker || '–';
+    const isMC = !madeCut && cutMissed.length >= 3;
+    return `<div class="final-lb-row">
+      <div class="final-lb-pos ${posClass}">${posDisplay}</div>
+      <div>
+        <div class="final-lb-name">${entry.name}</div>
+        <div class="final-lb-sub">${isMC ? 'MC' : 'Made Cut'} · TB: ${tbDisplay}</div>
+      </div>
+      <div class="final-lb-score ${cls}">${fmtScore(totalScore)}</div>
+      <div class="final-lb-payout ${i < 3 ? 'top3' : ''}">$${payout.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
 
 /* ═══ INIT ══════════════════════════════════════════════════ */
 async function init() {
