@@ -855,14 +855,18 @@ const FINAL_WINNING_SCORE = -4; // US Open 2026 winning score
 const FINAL_PAYOUTS = [1600, 800, 400, 100, 40, 40, 40, 40, 40, 40];
 
 function priceIsRightDistance(guess, target) {
-  // Price is Right: guessing UNDER is treated as worst (like going over)
-  // Closest to target WITHOUT going under wins
-  // If guess > target (over), distance = guess - target (bad, like going over the price)
-  // If guess < target (under), distance = Infinity (disqualified like going over in Price is Right)
-  // If guess === target, distance = 0 (perfect)
-  if (guess === target) return 0;
-  if (guess > target) return Infinity; // went over — disqualified
-  return target - guess; // under — closest without going over wins
+  // Guessing ABOVE target (higher number) takes priority over guessing below
+  // e.g. target = -4: guess of -3 beats guess of -5
+  // Among those above target: closest wins (-3 beats -2)
+  // Among those below target: closest wins (-5 beats -11)
+  // Above always beats below
+  const aboveTarget = guess >= target; // -3 >= -4 is true (higher number = above)
+  const dist = Math.abs(guess - target);
+  if (aboveTarget) {
+    return dist; // above: lower distance is better (sort ascending)
+  } else {
+    return 1000 + dist; // below: always worse than above, but closer is still better
+  }
 }
 
 function renderFinalLeaderboard() {
