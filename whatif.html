@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>What If? · US Open Pool 2026</title>
+  <title>What If? · Open Championship Pool 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Serif+4:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
@@ -338,7 +338,7 @@
   <header class="hero">
     <div style="position:relative;z-index:1">
       <a href="index.html" class="back-link">← Back to Leaderboard</a>
-      <div class="hero-flag">US Open Pool 2026</div>
+      <div class="hero-flag">Open Championship Pool 2026</div>
       <h1><em>What If?</em></h1>
       <p class="hero-sub">Simulate a golfer's score · See how the leaderboard changes</p>
     </div>
@@ -412,7 +412,7 @@
 /* ══════════════════════════════════════════════
    Config — must match index.html
 ══════════════════════════════════════════════ */
-const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTBOBhztXFPFlQGMglE80ekmzPTsBc-i28CCvNmRUpP1NVRpZO61oSXaB-P7B0cuqG1kfr4BXMprFAp/pub?output=csv';
+const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTBOBhztXFPFlQGMglE80ekmzPTsBc-i28CCvNmRUpP1NVRpZO61oSXaB-P7B0cuqG1kfr4BXMprFAp/pub?gid=322214960&single=true&output=csv';
 
 const COL = {
   name: 0,        // Column A - Team Name
@@ -425,10 +425,10 @@ const COL = {
 const CUT_LINE = null;
 
 // Missed cut list — update after Round 2 cut is made
-// 2026 US Open missed cut (cut at +4)
-// 2026 US Open missed cut (cut at +4)
-// 2026 US Open missed cut (cut at +4)
-// 2026 US Open missed cut — update after Round 2
+// 2026 Open Championship missed cut (cut at +4)
+// 2026 Open Championship missed cut (cut at +4)
+// 2026 Open Championship missed cut (cut at +4)
+// 2026 Open Championship missed cut — update after Round 2
 const MISSED_CUT_PLAYERS = new Set([]);
   return [...allNames].filter(n => n.trim()).sort();
 // Build master golfer name list
@@ -727,7 +727,7 @@ async function fetchEntries() {
 
 /* ── Fetch ESPN ──────────────────────────────── */
 async function fetchESPN() {
-  const ESPN_URL = 'https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260618&tournamentId=401811948';
+  const ESPN_URL = 'https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260716&tournamentId=401811957';
   const PROXIES = ['https://corsproxy.io/?','https://api.allorigins.win/raw?url=','https://corsproxy.org/?'];
   try {
     let res = null;

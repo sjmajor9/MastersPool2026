@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>US Open Pool 2026</title>
+  <title>The Open Championship Pool 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Serif+4:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
@@ -226,8 +226,8 @@
 <body>
 
 <header class="hero">
-  <div class="hero-flag">Shinnecock Hills · New York</div>
-  <h1>The <em>US Open</em></h1>
+  <div class="hero-flag">Royal Birkdale · Southport, England</div>
+  <h1>The <em>Open</em> Championship</h1>
   <div class="hero-year">POOL · 2026</div>
   <p class="hero-subtitle">Pick 6 · Best 4 Count · Lowest Score to Par Wins</p>
   <div class="hero-infobar">
@@ -242,7 +242,7 @@
       <div class="hero-info-sub" id="hero-tourn-score">Loading…</div>
     </div>
     <div class="hero-info-block">
-      <div class="hero-info-label">Weather · Southampton</div>
+      <div class="hero-info-label">Weather · Southport</div>
       <div class="hero-info-value" id="hero-weather-temp">—</div>
       <div class="hero-info-sub" id="hero-weather-cond">Loading…</div>
     </div>
@@ -257,15 +257,6 @@
 <!-- MAIN VIEW -->
 <div id="main-view">
   <div class="container">
-
-    <!-- Final Leaderboard -->
-    <div class="final-lb" id="final-lb">
-      <div class="final-lb-header">
-        <h2>🏆 Final Standings — Top 10</h2>
-        <p>2026 US Open Pool · Shinnecock Hills · Winning Score: -4</p>
-      </div>
-      <div id="final-lb-body"><div class="final-lb-loading">Calculating final standings…</div></div>
-    </div>
 
     <!-- Entry Lookup -->
     <div class="section-header">
@@ -296,6 +287,18 @@
     </div>
 
 
+
+    <!-- Pick Trends -->
+    <div class="section-header">
+      <h2 class="section-title">Pick Trends</h2>
+      <div class="section-line"></div>
+    </div>
+    <div class="picks-grid" id="picks-grid">
+      <div class="loading-state" style="grid-column:1/-1;padding:30px">
+        <div class="loading-spinner"></div>
+        <div>Loading picks data…</div>
+      </div>
+    </div>
 
     <!-- What If Button -->
     <div style="text-align:center;margin-bottom:40px;">
@@ -329,9 +332,9 @@
       <div class="no-results" id="no-results">No entries found.</div>
     </div>
 
-    <!-- US Open Leaderboard -->
+    <!-- Open Championship Leaderboard -->
     <div class="section-header">
-      <h2 class="section-title">US Open Leaderboard</h2>
+      <h2 class="section-title">Open Championship Leaderboard</h2>
       <div class="section-line"></div>
     </div>
     <p style="font-size:13px;color:rgba(245,240,232,0.45);margin-bottom:16px;letter-spacing:0.5px;">● Golfer picked by at least one pool entry</p>
@@ -362,11 +365,11 @@
   </div>
 </div>
 
-<footer>US Open Pool 2026 · Scores via ESPN · Entries via Google Sheets · Updated every 3 minutes</footer>
+<footer>Open Championship Pool 2026 · Scores via ESPN · Entries via Google Sheets · Updated every 3 minutes</footer>
 
 <script>
 /* ═══ CONFIG ═══════════════════════════════════════════════ */
-const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTBOBhztXFPFlQGMglE80ekmzPTsBc-i28CCvNmRUpP1NVRpZO61oSXaB-P7B0cuqG1kfr4BXMprFAp/pub?output=csv';
+const SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTBOBhztXFPFlQGMglE80ekmzPTsBc-i28CCvNmRUpP1NVRpZO61oSXaB-P7B0cuqG1kfr4BXMprFAp/pub?gid=322214960&single=true&output=csv';
 const COL = { name:0, tiebreaker:1, golfer1:2, golfer2:3, golfer3:4, golfer4:5, golfer5:6, golfer6:7 };
 const CUT_LINE = null;
 const WINNING_SCORE = -8; // Update for tiebreaker once winner is known
@@ -503,7 +506,7 @@ async function fetchEntries() {
     allEntries = parseCSV(csv);
     allEntries.forEach(e => e.golfers.forEach(g => poolGolfers.add(parseName(g))));
     renderPicksStats();
-    if (Object.keys(espnScores).length > 0) { renderPoolTable(); updateHeroLeader(); renderFinalLeaderboard(); }
+    if (Object.keys(espnScores).length > 0) { renderPoolTable(); updateHeroLeader(); }
   } catch(err) {
     document.getElementById('pool-loading').style.display = 'none';
     document.getElementById('pool-error').style.display = 'block';
@@ -513,7 +516,7 @@ async function fetchEntries() {
 
 /* ═══ FETCH ESPN ════════════════════════════════════════════ */
 async function fetchESPN() {
-  const ESPN_URL = 'https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260618&tournamentId=401811948';
+  const ESPN_URL = 'https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260716&tournamentId=401811957';
   const PROXIES = ['https://corsproxy.io/?','https://api.allorigins.win/raw?url=','https://corsproxy.org/?'];
   async function tryFetch(url) {
     try { const r = await fetch(url); if (r.ok) return r; } catch(e) {}
@@ -584,7 +587,7 @@ async function fetchESPN() {
     const now = new Date();
     const lu = document.getElementById('last-updated');
     if (lu) lu.textContent = 'Live · Updated ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    if (allEntries.length) { renderPoolTable(); renderFinalLeaderboard(); }
+    if (allEntries.length) renderPoolTable();
     updateHeroLeader();
     renderOdds();
   } catch(err) {
@@ -593,12 +596,12 @@ async function fetchESPN() {
     if (espnLoadEl) espnLoadEl.style.display = 'none';
     if (errEl) {
       errEl.style.display = 'block';
-      const started = new Date() >= new Date('2026-06-18T07:00:00-04:00');
+      const started = new Date() >= new Date('2026-07-16T06:35:00+01:00');
       errEl.innerHTML = started
-        ? '🔄 <strong>Fetching live scores…</strong><br><span style="font-size:12px;opacity:0.7">The US Open is underway — scores are loading.</span>'
-        : '⛳ <strong>Live scores will appear once the tournament begins.</strong><br><span style="font-size:12px;opacity:0.7">The 2026 US Open tees off June 18th.</span>';
+        ? '🔄 <strong>Fetching live scores…</strong><br><span style="font-size:12px;opacity:0.7">The Open Championship is underway — scores are loading.</span>'
+        : '⛳ <strong>Live scores will appear once the tournament begins.</strong><br><span style="font-size:12px;opacity:0.7">The 2026 Open Championship tees off July 16th.</span>';
       const lu = document.getElementById('last-updated');
-      if (lu) lu.textContent = started ? 'Retrying…' : 'Tournament starts June 18th';
+      if (lu) lu.textContent = started ? 'Retrying…' : 'Tournament starts July 16th';
     }
   }
 }
@@ -803,7 +806,7 @@ function updateHeroLeader() {
 /* ═══ WEATHER ══════════════════════════════════════════════ */
 async function fetchWeather() {
   try {
-    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.open-meteo.com/v1/forecast?latitude=40.8890&longitude=-72.4482&current=temperature_2m,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York'));
+    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.open-meteo.com/v1/forecast?latitude=53.6216&longitude=-3.0325&current=temperature_2m,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=Europe/London'));
     const data = await res.json();
     const temp = Math.round(data.current.temperature_2m);
     const wind = Math.round(data.current.wind_speed_10m);
@@ -849,80 +852,6 @@ function resetWhatIf() {
   renderPoolTable();
 }
 document.addEventListener('click', e => { if (!e.target.closest('.whatif-suggestions')) document.getElementById('whatif-dropdown')?.classList.remove('show'); });
-
-/* ═══ FINAL LEADERBOARD ════════════════════════════════════ */
-const FINAL_WINNING_SCORE = -4; // US Open 2026 winning score
-const FINAL_PAYOUTS = [1500, 1000, 400, 100, 40, 40, 40, 40, 40, 40];
-
-function priceIsRightDistance(guess, target) {
-  // Guessing ABOVE target (higher number) takes priority over guessing below
-  // e.g. target = -4: guess of -3 beats guess of -5
-  // Among those above target: closest wins (-3 beats -2)
-  // Among those below target: closest wins (-5 beats -11)
-  // Above always beats below
-  const aboveTarget = guess >= target; // -3 >= -4 is true (higher number = above)
-  const dist = Math.abs(guess - target);
-  if (aboveTarget) {
-    return dist; // above: lower distance is better (sort ascending)
-  } else {
-    return 1000 + dist; // below: always worse than above, but closer is still better
-  }
-}
-
-function renderFinalLeaderboard() {
-  const body = document.getElementById('final-lb-body');
-  if (!body || !allEntries.length) return;
-
-  // Score all entries
-  const scored = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
-
-  // Sort: made cut first, then by pool score asc, then by Price is Right tiebreaker
-  scored.sort((a, b) => {
-    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
-    if (a.totalScore === null && b.totalScore === null) {
-      return priceIsRightDistance(a.entry.tiebreaker, FINAL_WINNING_SCORE) - priceIsRightDistance(b.entry.tiebreaker, FINAL_WINNING_SCORE);
-    }
-    if (a.totalScore === null) return 1;
-    if (b.totalScore === null) return -1;
-    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
-    // Tied on score — apply Price is Right tiebreaker
-    return priceIsRightDistance(a.entry.tiebreaker, FINAL_WINNING_SCORE) - priceIsRightDistance(b.entry.tiebreaker, FINAL_WINNING_SCORE);
-  });
-
-  // Assign positions
-  let pos = 1;
-  scored.forEach((s, i) => {
-    s.finalRank = pos;
-    if (i < scored.length - 1) {
-      const next = scored[i + 1];
-      const sameTb = priceIsRightDistance(s.entry.tiebreaker, FINAL_WINNING_SCORE) === priceIsRightDistance(next.entry.tiebreaker, FINAL_WINNING_SCORE);
-      if (s.totalScore !== null && next.totalScore === s.totalScore && s.madeCut === next.madeCut && sameTb) {}
-      else { pos = i + 2; }
-    }
-  });
-
-  const top10 = scored.slice(0, 10);
-
-  body.innerHTML = top10.map((s, i) => {
-    const { entry, totalScore, madeCut, cutMissed } = s;
-    const payout = FINAL_PAYOUTS[i] || 0;
-    const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const posDisplay = scored.filter(x => x.finalRank === s.finalRank).length > 1 ? 'T' + s.finalRank : String(s.finalRank);
-    const cls = totalScore !== null && totalScore < 0 ? 'under' : totalScore !== null && totalScore > 0 ? 'over' : 'even';
-    const tbDist = priceIsRightDistance(entry.tiebreaker, FINAL_WINNING_SCORE);
-    const tbDisplay = tbDist === Infinity ? `${entry.tiebreaker} ↑` : entry.tiebreaker || '–';
-    const isMC = !madeCut && cutMissed.length >= 3;
-    return `<div class="final-lb-row">
-      <div class="final-lb-pos ${posClass}">${posDisplay}</div>
-      <div>
-        <div class="final-lb-name">${entry.name}</div>
-        <div class="final-lb-sub">${isMC ? 'MC' : 'Made Cut'} · TB: ${tbDisplay}</div>
-      </div>
-      <div class="final-lb-score ${cls}">${fmtScore(totalScore)}</div>
-      <div class="final-lb-payout ${i < 3 ? 'top3' : ''}">$${payout.toLocaleString()}</div>
-    </div>`;
-  }).join('');
-}
 
 /* ═══ INIT ══════════════════════════════════════════════════ */
 async function init() {
