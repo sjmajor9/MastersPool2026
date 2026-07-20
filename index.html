@@ -258,6 +258,15 @@
 <div id="main-view">
   <div class="container">
 
+    <!-- Final Leaderboard -->
+    <div class="final-lb" id="final-lb">
+      <div class="final-lb-header">
+        <h2>🏆 Final Standings — Top 10</h2>
+        <p>2026 Open Championship Pool · Royal Birkdale · Winning Score: -10</p>
+      </div>
+      <div id="final-lb-body"><div class="final-lb-loading">Calculating final standings…</div></div>
+    </div>
+
     <!-- Entry Lookup -->
     <div class="section-header">
       <h2 class="section-title">Look Up Your Entry</h2>
@@ -506,7 +515,7 @@ async function fetchEntries() {
     allEntries = parseCSV(csv);
     allEntries.forEach(e => e.golfers.forEach(g => poolGolfers.add(parseName(g))));
     renderPicksStats();
-    if (Object.keys(espnScores).length > 0) { renderPoolTable(); updateHeroLeader(); }
+    if (Object.keys(espnScores).length > 0) { renderPoolTable(); updateHeroLeader(); renderFinalLeaderboard(); }
   } catch(err) {
     document.getElementById('pool-loading').style.display = 'none';
     document.getElementById('pool-error').style.display = 'block';
@@ -587,7 +596,7 @@ async function fetchESPN() {
     const now = new Date();
     const lu = document.getElementById('last-updated');
     if (lu) lu.textContent = 'Live · Updated ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    if (allEntries.length) renderPoolTable();
+    if (allEntries.length) { renderPoolTable(); renderFinalLeaderboard(); }
     updateHeroLeader();
     renderOdds();
   } catch(err) {
@@ -856,6 +865,67 @@ function resetWhatIf() {
   renderPoolTable();
 }
 document.addEventListener('click', e => { if (!e.target.closest('.whatif-suggestions')) document.getElementById('whatif-dropdown')?.classList.remove('show'); });
+
+/* ═══ FINAL LEADERBOARD ════════════════════════════════════ */
+const FINAL_WINNING_SCORE = -10; // Ryan Fox, 2026 Open Championship
+const FINAL_PAYOUTS = [950, 475, 200, 100, 60, 40, 40, 40, 40, 40];
+
+function priceIsRightDistance(guess, target) {
+  // Matching the winning score is best. Guessing above (higher number) ranks
+  // by distance. Guessing below the winning score ranks behind all above-guesses.
+  const aboveTarget = guess >= target;
+  const dist = Math.abs(guess - target);
+  return aboveTarget ? dist : 1000 + dist;
+}
+
+function renderFinalLeaderboard() {
+  const body = document.getElementById('final-lb-body');
+  if (!body || !allEntries.length) return;
+
+  const scored = allEntries.map(entry => ({ entry, ...scoreEntry(entry) }));
+
+  scored.sort((a, b) => {
+    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
+    if (a.totalScore === null && b.totalScore === null) {
+      return priceIsRightDistance(a.entry.tiebreaker, FINAL_WINNING_SCORE) - priceIsRightDistance(b.entry.tiebreaker, FINAL_WINNING_SCORE);
+    }
+    if (a.totalScore === null) return 1;
+    if (b.totalScore === null) return -1;
+    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
+    return priceIsRightDistance(a.entry.tiebreaker, FINAL_WINNING_SCORE) - priceIsRightDistance(b.entry.tiebreaker, FINAL_WINNING_SCORE);
+  });
+
+  let pos = 1;
+  scored.forEach((s, i) => {
+    s.finalRank = pos;
+    if (i < scored.length - 1) {
+      const next = scored[i + 1];
+      const sameTb = priceIsRightDistance(s.entry.tiebreaker, FINAL_WINNING_SCORE) === priceIsRightDistance(next.entry.tiebreaker, FINAL_WINNING_SCORE);
+      if (s.totalScore !== null && next.totalScore === s.totalScore && s.madeCut === next.madeCut && sameTb) {}
+      else { pos = i + 2; }
+    }
+  });
+
+  const top10 = scored.slice(0, 10);
+
+  body.innerHTML = top10.map((s, i) => {
+    const { entry, totalScore, madeCut, cutMissed } = s;
+    const payout = FINAL_PAYOUTS[i] || 0;
+    const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const posDisplay = scored.filter(x => x.finalRank === s.finalRank).length > 1 ? 'T' + s.finalRank : String(s.finalRank);
+    const cls = totalScore !== null && totalScore < 0 ? 'under' : totalScore !== null && totalScore > 0 ? 'over' : 'even';
+    const isMC = !madeCut && cutMissed.length >= 3;
+    return `<div class="final-lb-row">
+      <div class="final-lb-pos ${posClass}">${posDisplay}</div>
+      <div>
+        <div class="final-lb-name">${entry.name}</div>
+        <div class="final-lb-sub">${isMC ? 'MC' : 'Made Cut'} · TB: ${entry.tiebreaker !== 0 ? entry.tiebreaker : '–'}</div>
+      </div>
+      <div class="final-lb-score ${cls}">${fmtScore(totalScore)}</div>
+      <div class="final-lb-payout ${i < 3 ? 'top3' : ''}">$${payout.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
 
 /* ═══ INIT ══════════════════════════════════════════════════ */
 async function init() {
